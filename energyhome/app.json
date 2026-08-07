@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "EnergyHome",
+    "slug": "energyhome",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#f8f9ff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.energyhome.app"
+    },
+    "android": {
+      "package": "com.energyhome.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#f8f9ff"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-web-browser",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "13037f34-f70c-445e-b3be-f361f38904e6"
+      }
+    },
+    "owner": "brunovivencios-team"
+  }
+}
