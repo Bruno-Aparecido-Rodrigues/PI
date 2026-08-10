@@ -16,22 +16,17 @@ import {
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Preencha com as credenciais do seu projeto Firebase (Console do Firebase >
-// Configurações do projeto > Seus apps > Configuração do SDK).
 const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT.firebaseapp.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+  apiKey: "AIzaSyAMRmDws9AsB1VGAVeyJikxIrJY7uUeowc",
+  authDomain: "pi-energia-db.firebaseapp.com",
+  projectId: "pi-energia-db",
+  storageBucket: "pi-energia-db.firebasestorage.app",
+  messagingSenderId: "381830661025",
+  appId: "1:381830661025:web:966968477f8d3251a641e0"
 };
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
-// No React Native (diferente da Web), o Auth precisa ser inicializado com
-// initializeAuth + uma persistência explícita (AsyncStorage), em vez de getAuth().
-// O try/catch evita erro em Fast Refresh, quando o app tenta inicializar de novo.
 let auth: ReturnType<typeof getAuth>;
 try {
   auth = initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });
