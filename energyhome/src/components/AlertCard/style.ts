@@ -24,6 +24,12 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  iconCircleUnread: {
+    backgroundColor: `${colors.primary}1A`,
+  },
+  iconCircleRead: {
+    backgroundColor: colors.surfaceContainerLow,
+  },
   content: {
     flex: 1,
   },
@@ -32,12 +38,24 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    marginRight: 8,
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
   title: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.onSurface,
-    flex: 1,
-    marginRight: 8,
+    flexShrink: 1,
   },
   time: {
     fontSize: 12,
@@ -47,27 +65,5 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.onSurfaceVariant,
     marginTop: 4,
-  },
-  tagsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-  tag: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 9999,
-  },
-  tagNeutral: {
-    backgroundColor: colors.surfaceContainerLow,
-  },
-  tagText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  tagTextNeutral: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.onSurfaceVariant,
   },
 });

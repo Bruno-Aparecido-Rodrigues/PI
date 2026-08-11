@@ -1,21 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
 import { PowerUsageCard } from '../../components/PowerUsageCard';
 import { BillEstimateCard } from '../../components/BillEstimateCard';
 import { StatCard } from '../../components/StatCard';
+import { useEnergyData } from '../../hooks/useEnergyData';
 import { styles } from './style';
 
 export function DashboardScreen() {
-  const [power, setPower] = useState(1920);
+  const { currentWatts, todayKwh, monthKwh, estimatedBill, tariff, peakWatts } = useEnergyData();
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPower((prev) => prev + (Math.floor(Math.random() * 21) - 10));
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
+  const hasCurrentReading = currentWatts !== null;
+  const projectedBill = estimatedBill * 1.3; // estimativa simples até o fim do mês
+  const progressPercent = projectedBill > 0 ? Math.min(100, (estimatedBill / projectedBill) * 100) : 0;
 
   return (
     <View style={styles.screen}>
@@ -28,13 +26,17 @@ export function DashboardScreen() {
           </View>
         </View>
 
-        <PowerUsageCard watts={power} comparisonLabel="12% menor que ontem" trendDown />
+        <PowerUsageCard
+          watts={hasCurrentReading ? Math.round(currentWatts!) : 0}
+          comparisonLabel={hasCurrentReading ? 'Leitura em tempo real do Hub' : 'Aguardando leitura do Hub…'}
+          trendDown
+        />
 
         <BillEstimateCard
-          currentValue="142,50"
-          projectedValue="R$ 184,00"
-          billingCycleLabel="Ciclo atual de faturamento: 1 - 31"
-          progressPercent={75}
+          currentValue={estimatedBill.toFixed(2).replace('.', ',')}
+          projectedValue={`R$ ${projectedBill.toFixed(2).replace('.', ',')}`}
+          billingCycleLabel={`Tarifa atual: R$ ${tariff.toFixed(2).replace('.', ',')}/kWh`}
+          progressPercent={progressPercent}
         />
 
         <View style={styles.statsRow}>
@@ -43,7 +45,7 @@ export function DashboardScreen() {
             iconBackground={colors.secondaryFixed}
             iconColor={colors.onSecondaryFixed}
             label="Hoje"
-            value="18.4"
+            value={todayKwh.toFixed(1)}
             unit="kWh"
           />
           <StatCard
@@ -51,7 +53,7 @@ export function DashboardScreen() {
             iconBackground={colors.primaryFixed}
             iconColor={colors.onPrimaryFixed}
             label="Este Mês"
-            value="452.1"
+            value={monthKwh.toFixed(1)}
             unit="kWh"
           />
           <StatCard
@@ -59,7 +61,7 @@ export function DashboardScreen() {
             iconBackground={colors.surfaceVariant}
             iconColor={colors.primary}
             label="Pico de Demanda"
-            value="3.8"
+            value={(peakWatts / 1000).toFixed(2)}
             unit="kW"
           />
         </View>

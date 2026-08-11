@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, Switch, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, Switch, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
 import { logout, deleteAccount } from '../../services/authIntegration';
+import { getTariff, setTariff as saveTariff } from '../../services/energyData';
 import { styles } from './style';
 
 const DEVICES = [
@@ -16,11 +17,27 @@ interface SettingsScreenProps {
 
 export function SettingsScreen({ navigation }: SettingsScreenProps) {
   const [tariff, setTariff] = useState('0.85');
+  const [savingTariff, setSavingTariff] = useState(false);
   const [offPeakDiscount, setOffPeakDiscount] = useState(true);
   const [confirmingDeviceId, setConfirmingDeviceId] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [deleteError, setDeleteError] = useState('');
+
+  useEffect(() => {
+    getTariff().then((value) => setTariff(String(value)));
+  }, []);
+
+  async function handleTariffBlur() {
+    const parsed = Number(tariff.replace(',', '.'));
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      return;
+    }
+    setSavingTariff(true);
+    await saveTariff(parsed);
+    setSavingTariff(false);
+    setFeedback('Tarifa atualizada.');
+  }
 
   async function handleLogout() {
     await logout();
@@ -78,7 +95,9 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
                 keyboardType="decimal-pad"
                 value={tariff}
                 onChangeText={setTariff}
+                onBlur={handleTariffBlur}
               />
+              {savingTariff ? <ActivityIndicator size="small" color={colors.primary} /> : null}
             </View>
             <Text style={styles.fieldHint}>Usado para calcular a economia mensal.</Text>
           </View>

@@ -12,7 +12,7 @@ export const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   headerRow: {
-    gap: 12,
+    gap: 4,
   },
   title: {
     fontSize: 26,
@@ -24,34 +24,37 @@ export const styles = StyleSheet.create({
     color: colors.onSurfaceVariant,
     marginTop: 4,
   },
-  actionsRow: {
+  filterRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.surfaceContainerLowest,
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 9999,
+    backgroundColor: colors.surfaceContainerLow,
     borderWidth: 1,
     borderColor: colors.outlineVariant,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
   },
-  actionText: {
+  filterChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  filterChipText: {
     fontSize: 13,
     fontWeight: '500',
-    color: colors.onSurface,
+    color: colors.onSurfaceVariant,
+  },
+  filterChipTextActive: {
+    color: colors.onPrimary,
   },
   summaryRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
   },
   summaryCard: {
     flex: 1,
-    minWidth: 150,
     backgroundColor: colors.surfaceContainerLowest,
     borderRadius: 12,
     borderWidth: 1,
@@ -71,11 +74,16 @@ export const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 30,
     fontWeight: '700',
+    color: colors.primary,
+  },
+  summaryValueMuted: {
     color: colors.onSurface,
   },
-  summaryNote: {
-    fontSize: 12,
-    marginTop: 4,
+  emptyText: {
+    fontSize: 14,
+    color: colors.onSurfaceVariant,
+    textAlign: 'center',
+    marginTop: 24,
   },
   section: {
     gap: 12,
