@@ -73,6 +73,18 @@ export const styles = StyleSheet.create({
     color: colors.onSurfaceVariant,
     fontStyle: 'italic',
   },
+  saveTariffButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  saveTariffButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.onPrimary,
+  },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

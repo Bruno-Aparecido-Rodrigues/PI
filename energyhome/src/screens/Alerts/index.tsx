@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
@@ -7,16 +7,23 @@ import { AlertCard } from '../../components/AlertCard';
 import { subscribeToAlerts, markAlertAsRead, Alert } from '../../services/alertsData';
 import { styles } from './style';
 
-const FILTERS = [
+const PERIOD_FILTERS = [
   { id: 'today', label: 'Hoje' },
   { id: '7d', label: '7 dias' },
   { id: '30d', label: '30 dias' },
   { id: 'all', label: 'Tudo' },
 ] as const;
 
-type FilterId = (typeof FILTERS)[number]['id'];
+const STATUS_FILTERS = [
+  { id: 'all', label: 'Todos' },
+  { id: 'unread', label: 'Não lidos' },
+  { id: 'read', label: 'Lidos' },
+] as const;
 
-function filterByDate(alerts: Alert[], filter: FilterId): Alert[] {
+type PeriodFilterId = (typeof PERIOD_FILTERS)[number]['id'];
+type StatusFilterId = (typeof STATUS_FILTERS)[number]['id'];
+
+function filterByDate(alerts: Alert[], filter: PeriodFilterId): Alert[] {
   if (filter === 'all') return alerts;
 
   const now = new Date();
@@ -31,6 +38,12 @@ function filterByDate(alerts: Alert[], filter: FilterId): Alert[] {
   }
 
   return alerts.filter((alert) => alert.timestamp >= cutoff.getTime());
+}
+
+function filterByStatus(alerts: Alert[], filter: StatusFilterId): Alert[] {
+  if (filter === 'all') return alerts;
+  if (filter === 'unread') return alerts.filter((a) => !a.read);
+  return alerts.filter((a) => a.read);
 }
 
 function groupByDay(alerts: Alert[]): { label: string; alerts: Alert[] }[] {
@@ -63,18 +76,28 @@ function groupByDay(alerts: Alert[]): { label: string; alerts: Alert[] }[] {
 
 export function AlertsScreen() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [filter, setFilter] = useState<FilterId>('7d');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilterId>('7d');
+  const [statusFilter, setStatusFilter] = useState<StatusFilterId>('all');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   React.useEffect(() => {
     const unsubscribe = subscribeToAlerts(setAlerts);
     return unsubscribe;
   }, []);
 
-  const filteredAlerts = useMemo(() => filterByDate(alerts, filter), [alerts, filter]);
+  const filteredAlerts = useMemo(() => {
+    const byDate = filterByDate(alerts, periodFilter);
+    return filterByStatus(byDate, statusFilter);
+  }, [alerts, periodFilter, statusFilter]);
+
   const groups = useMemo(() => groupByDay(filteredAlerts), [filteredAlerts]);
 
   const unreadCount = filteredAlerts.filter((a) => !a.read).length;
   const readCount = filteredAlerts.length - unreadCount;
+
+  const periodLabel = PERIOD_FILTERS.find((f) => f.id === periodFilter)?.label;
+  const statusLabel = STATUS_FILTERS.find((f) => f.id === statusFilter)?.label;
+  const filterSummary = statusFilter === 'all' ? periodLabel : `${periodLabel} · ${statusLabel}`;
 
   return (
     <View style={styles.screen}>
@@ -85,19 +108,11 @@ export function AlertsScreen() {
           <Text style={styles.subtitle}>Revise cronologicamente as anomalias de energia e notificações do sistema.</Text>
         </View>
 
-        <View style={styles.filterRow}>
-          {FILTERS.map((f) => (
-            <TouchableOpacity
-              key={f.id}
-              onPress={() => setFilter(f.id)}
-              style={[styles.filterChip, filter === f.id && styles.filterChipActive]}
-            >
-              <Text style={[styles.filterChipText, filter === f.id && styles.filterChipTextActive]}>
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
+          <MaterialIcons name="filter-list" size={18} color={colors.onSurface} />
+          <Text style={styles.filterButtonText}>{filterSummary}</Text>
+          <MaterialIcons name="expand-more" size={18} color={colors.onSurfaceVariant} />
+        </TouchableOpacity>
 
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
@@ -139,6 +154,53 @@ export function AlertsScreen() {
           ))
         )}
       </ScrollView>
+
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setFilterModalVisible(false)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.modalTitle}>Filtrar alertas</Text>
+
+            <Text style={styles.modalSectionLabel}>Período</Text>
+            <View style={styles.modalChipRow}>
+              {PERIOD_FILTERS.map((f) => (
+                <TouchableOpacity
+                  key={f.id}
+                  onPress={() => setPeriodFilter(f.id)}
+                  style={[styles.filterChip, periodFilter === f.id && styles.filterChipActive]}
+                >
+                  <Text style={[styles.filterChipText, periodFilter === f.id && styles.filterChipTextActive]}>
+                    {f.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.modalSectionLabel}>Status</Text>
+            <View style={styles.modalChipRow}>
+              {STATUS_FILTERS.map((f) => (
+                <TouchableOpacity
+                  key={f.id}
+                  onPress={() => setStatusFilter(f.id)}
+                  style={[styles.filterChip, statusFilter === f.id && styles.filterChipActive]}
+                >
+                  <Text style={[styles.filterChipText, statusFilter === f.id && styles.filterChipTextActive]}>
+                    {f.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setFilterModalVisible(false)}>
+              <Text style={styles.modalCloseButtonText}>Aplicar</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

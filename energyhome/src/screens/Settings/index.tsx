@@ -22,21 +22,23 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
   const [confirmingDeviceId, setConfirmingDeviceId] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [tariffFeedback, setTariffFeedback] = useState('');
   const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     getTariff().then((value) => setTariff(String(value)));
   }, []);
 
-  async function handleTariffBlur() {
+  async function handleSaveTariff() {
     const parsed = Number(tariff.replace(',', '.'));
     if (Number.isNaN(parsed) || parsed <= 0) {
+      setTariffFeedback('Digite um valor de tarifa válido.');
       return;
     }
     setSavingTariff(true);
     await saveTariff(parsed);
     setSavingTariff(false);
-    setFeedback('Tarifa atualizada.');
+    setTariffFeedback('Tarifa registrada.');
   }
 
   async function handleLogout() {
@@ -95,10 +97,20 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
                 keyboardType="decimal-pad"
                 value={tariff}
                 onChangeText={setTariff}
-                onBlur={handleTariffBlur}
               />
-              {savingTariff ? <ActivityIndicator size="small" color={colors.primary} /> : null}
             </View>
+            <TouchableOpacity
+              style={styles.saveTariffButton}
+              onPress={handleSaveTariff}
+              disabled={savingTariff}
+            >
+              {savingTariff ? (
+                <ActivityIndicator size="small" color={colors.onPrimary} />
+              ) : (
+                <Text style={styles.saveTariffButtonText}>Salvar Tarifa</Text>
+              )}
+            </TouchableOpacity>
+            {tariffFeedback ? <Text style={styles.feedbackText}>{tariffFeedback}</Text> : null}
             <Text style={styles.fieldHint}>Usado para calcular a economia mensal.</Text>
           </View>
 
