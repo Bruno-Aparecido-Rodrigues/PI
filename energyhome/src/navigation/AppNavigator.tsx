@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { LoginScreen } from '../screens/Login';
 import { RegisterScreen } from '../screens/Register';
+import { ForgotPasswordScreen } from '../screens/ForgotPassword';
 import { DashboardScreen } from '../screens/Dashboard';
 import { ChartsScreen } from '../screens/Charts';
 import { AlertsScreen } from '../screens/Alerts';
@@ -34,6 +35,7 @@ export function AppNavigator() {
       <RootStack.Navigator screenOptions={{ headerShown: false }} initialRouteName="MainTabs">
         <RootStack.Screen name="Login" component={LoginScreen} />
         <RootStack.Screen name="Register" component={RegisterScreen} />
+        <RootStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <RootStack.Screen name="MainTabs" component={MainTabs} />
       </RootStack.Navigator>
     </NavigationContainer>

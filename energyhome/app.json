@@ -3,6 +3,7 @@
     "name": "EnergyHome",
     "slug": "energyhome",
     "version": "1.0.0",
+    "scheme": "energyhome",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {

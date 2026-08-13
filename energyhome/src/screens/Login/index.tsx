@@ -5,7 +5,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { colors } from '../../constants/colors';
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '../../constants/googleAuth';
-import { login, resetPassword, loginWithGoogleIdToken } from '../../services/authIntegration';
+import { login, loginWithGoogleIdToken } from '../../services/authIntegration';
 import { styles } from './style';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -76,25 +76,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     navigation.replace('MainTabs');
   }
 
-  async function handleForgotPassword() {
-    setErrorMessage('');
-    setInfoMessage('');
-
-    if (!email) {
-      setErrorMessage('Digite seu e-mail acima para receber o link de redefinição.');
-      return;
-    }
-
-    const result = await resetPassword(email);
-
-    if (!result.success) {
-      setErrorMessage(result.message);
-      return;
-    }
-
-    setInfoMessage('Se o e-mail existir, enviamos um link para redefinir sua senha.');
-  }
-
   return (
     <KeyboardAvoidingView
       style={styles.screen}
@@ -126,7 +107,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           <View style={styles.field}>
             <View style={styles.labelRow}>
               <Text style={styles.label}>Senha</Text>
-              <TouchableOpacity onPress={handleForgotPassword}>
+              <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
                 <Text style={styles.link}>Esqueceu a senha?</Text>
               </TouchableOpacity>
             </View>
