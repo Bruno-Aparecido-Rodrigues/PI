@@ -47,19 +47,4 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.tertiary,
   },
-  avatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: colors.surfaceContainerHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surfaceContainerLow,
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-  },
 });

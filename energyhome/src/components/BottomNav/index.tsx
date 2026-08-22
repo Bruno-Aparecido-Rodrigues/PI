@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { colors } from '../../constants/colors';
 import { styles } from './style';
@@ -20,8 +21,10 @@ const LABELS: Record<string, string> = {
 };
 
 export function BottomNav({ state, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom + 10 }]}>
       {state.routes.map((route, index) => {
         const isFocused = state.index === index;
         const icon = ICONS[route.name] ?? 'circle';
