@@ -35,8 +35,8 @@ Cada componente/tela segue o padrão pasta própria com `index.tsx` + `style.ts`
 
 ## Antes de rodar
 
-1. `npm install` (se for a primeira vez)
-3. `npm expo start` (Expo)
+1. `cd energyhome npm install` (se for a primeira vez)
+3. `npx expo start` (Expo)
 3. aperta s para switch to expo go  (o google usa o developer kit e isso baixa o app para usar o login do google, mas n usaremos por enquanto)
 
 ### Exclusão de conta e recuperação de senha

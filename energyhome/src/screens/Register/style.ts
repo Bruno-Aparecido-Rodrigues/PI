@@ -89,6 +89,10 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.error,
   },
+  infoText: {
+    fontSize: 13,
+    color: colors.tertiary,
+  },
   submitButton: {
     backgroundColor: colors.primary,
     borderRadius: 8,

@@ -17,6 +17,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [registered, setRegistered] = useState(false);
 
   async function handleRegister() {
     setErrorMessage('');
@@ -40,7 +41,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
       return;
     }
 
-    navigation.replace('MainTabs');
+    setRegistered(true);
   }
 
   return (
@@ -63,77 +64,89 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
           <Text style={styles.subtitle}>Comece a monitorar o consumo da sua casa</Text>
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.field}>
-            <Text style={styles.label}>Nome Completo</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Seu nome"
-              placeholderTextColor={colors.outline}
-              value={name}
-              onChangeText={setName}
-            />
+        {registered ? ( // tela de email de confirmação
+          <View style={styles.form}>
+            <Text style={styles.infoText}>
+              Enviamos um e-mail de confirmação para {email}. Verifique sua caixa de
+              entrada (e o spam) e clique no link antes de fazer login.
+            </Text>
+            <TouchableOpacity style={styles.submitButton} onPress={() => navigation.replace('Login')}>
+              <Text style={styles.submitButtonText}>Ir para o Login</Text>
+            </TouchableOpacity>
           </View>
+        ) : ( //formulário de registro
+          <View style={styles.form}>
+            <View style={styles.field}>
+              <Text style={styles.label}>Nome Completo</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Seu nome"
+                placeholderTextColor={colors.outline}
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>E-mail</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="nome@empresa.com"
-              placeholderTextColor={colors.outline}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-            />
-          </View>
+            <View style={styles.field}>
+              <Text style={styles.label}>E-mail</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="nome@empresa.com"
+                placeholderTextColor={colors.outline}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </View>
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Senha</Text>
-            <View style={styles.passwordWrapper}>
+            <View style={styles.field}>
+              <Text style={styles.label}>Senha</Text>
+              <View style={styles.passwordWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.outline}
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                />
+                <TouchableOpacity
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <MaterialIcons
+                    name={showPassword ? 'visibility-off' : 'visibility'}
+                    size={20}
+                    color={colors.outline}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Confirmar Senha</Text>
               <TextInput
                 style={styles.input}
                 placeholder="••••••••"
                 placeholderTextColor={colors.outline}
                 secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
               />
-              <TouchableOpacity
-                style={styles.eyeButton}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <MaterialIcons
-                  name={showPassword ? 'visibility-off' : 'visibility'}
-                  size={20}
-                  color={colors.outline}
-                />
-              </TouchableOpacity>
             </View>
+
+            {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+            <TouchableOpacity style={styles.submitButton} onPress={handleRegister} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color={colors.onPrimary} />
+              ) : (
+                <Text style={styles.submitButtonText}>Criar Conta</Text>
+              )}
+            </TouchableOpacity>
           </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>Confirmar Senha</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor={colors.outline}
-              secureTextEntry={!showPassword}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-            />
-          </View>
-
-          {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
-
-          <TouchableOpacity style={styles.submitButton} onPress={handleRegister} disabled={loading}>
-            {loading ? (
-              <ActivityIndicator color={colors.onPrimary} />
-            ) : (
-              <Text style={styles.submitButtonText}>Criar Conta</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        )}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Já tem uma conta? </Text>

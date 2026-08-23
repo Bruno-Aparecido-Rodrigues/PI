@@ -10,20 +10,13 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  sendEmailVerification,
   updateProfile,
   deleteUser,
   User,
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAMRmDws9AsB1VGAVeyJikxIrJY7uUeowc",
-  authDomain: "pi-energia-db.firebaseapp.com",
-  projectId: "pi-energia-db",
-  storageBucket: "pi-energia-db.firebasestorage.app",
-  messagingSenderId: "381830661025",
-  appId: "1:381830661025:web:966968477f8d3251a641e0"
-};
+import { firebaseConfig } from './firebaseConfig';
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
@@ -58,6 +51,15 @@ function mapAuthError(code: string): string {
 export async function login(email: string, password: string): Promise<AuthResult> {
   try {
     const credential = await signInWithEmailAndPassword(auth, email, password);
+
+    if (!credential.user.emailVerified) {
+      await firebaseSignOut(auth);
+      return {
+        success: false,
+        message: 'Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada (e o spam).',
+      };
+    }
+
     return { success: true, user: credential.user };
   } catch (error: any) {
     return { success: false, message: mapAuthError(error?.code) };
@@ -70,6 +72,13 @@ export async function register(email: string, password: string, name?: string): 
     if (name) {
       await updateProfile(credential.user, { displayName: name });
     }
+
+    await sendEmailVerification(credential.user);
+
+    // Não deixa a pessoa entrar direto sem confirmar o e-mail — desloga
+    // logo após criar a conta. O login só é permitido depois da verificação.
+    await firebaseSignOut(auth);
+
     return { success: true, user: credential.user };
   } catch (error: any) {
     return { success: false, message: mapAuthError(error?.code) };
@@ -127,4 +136,4 @@ export async function deleteAccount(): Promise<AuthResult> {
   }
 }
 
-export { auth };
+export { auth, app };
