@@ -8,7 +8,11 @@ import { StatCard } from '../../components/StatCard';
 import { useEnergyData } from '../../hooks/useEnergyData';
 import { styles } from './style';
 
-export function DashboardScreen() {
+interface DashboardScreenProps {
+  navigation: any;
+}
+
+export function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { currentWatts, todayKwh, monthKwh, estimatedBill, tariff, peakWatts } = useEnergyData();
 
   const hasCurrentReading = currentWatts !== null;
@@ -37,6 +41,7 @@ export function DashboardScreen() {
           projectedValue={`R$ ${projectedBill.toFixed(2).replace('.', ',')}`}
           billingCycleLabel={`Tarifa atual: R$ ${tariff.toFixed(2).replace('.', ',')}/kWh`}
           progressPercent={progressPercent}
+          onViewForecast={() => navigation.navigate('Charts')}
         />
 
         <View style={styles.statsRow}>

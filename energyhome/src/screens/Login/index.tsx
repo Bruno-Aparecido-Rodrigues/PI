@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
@@ -79,20 +79,14 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
       <View style={styles.card}>
         <View style={styles.header}>
           <View style={styles.logoBox}>
             <MaterialIcons name="bolt" size={26} color={colors.onPrimary} />
           </View>
-          <Text style={styles.title}>EnergyHome</Text>
+          <Text style={styles.title}>A.C.D.C</Text>
           <Text style={styles.subtitle}>Monitoramento de precisão para sua casa</Text>
         </View>
 
@@ -173,7 +167,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           </TouchableOpacity>
         </View>
       </View>
-      </ScrollView>
     </KeyboardAvoidingView>
   );
 }

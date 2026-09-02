@@ -81,12 +81,94 @@ export function startOfTodayMs(): number {
   return now.getTime();
 }
 
+/** Meia-noite de N dias atrás (contando hoje como dia 0). */
+export function startOfDaysAgoMs(daysAgo: number): number {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  now.setDate(now.getDate() - daysAgo);
+  return now.getTime();
+}
+
 /** Início do mês atual (dia 1, 00:00) em milissegundos. */
 export function startOfMonthMs(): number {
   const now = new Date();
   now.setDate(1);
   now.setHours(0, 0, 0, 0);
   return now.getTime();
+}
+
+const MAX_GAP_HOURS = 3; // ignora buracos grandes (hub offline) pra não inflar o cálculo
+
+function dayKeyOf(timestamp: number): string {
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function hourKeyOf(timestamp: number): number {
+  return new Date(timestamp).getHours();
+}
+
+/**
+ * Agrupa as leituras em energia (kWh) por dia, para uma lista de dias
+ * (cada item é a meia-noite daquele dia). Usado pelos gráficos de
+ * "Semana"/"Mês".
+ */
+export function bucketKwhByDay(readings: PowerReading[], days: Date[]): number[] {
+  const buckets = new Map<string, number>();
+
+  for (let i = 1; i < readings.length; i++) {
+    const prev = readings[i - 1];
+    const curr = readings[i];
+    const hoursElapsed = (curr.timestamp - prev.timestamp) / (1000 * 60 * 60);
+    if (hoursElapsed <= 0 || hoursElapsed > MAX_GAP_HOURS) continue;
+
+    const avgWatts = (prev.watts + curr.watts) / 2;
+    const kwh = (avgWatts * hoursElapsed) / 1000;
+    const key = dayKeyOf(curr.timestamp);
+    buckets.set(key, (buckets.get(key) ?? 0) + kwh);
+  }
+
+  return days.map((day) => buckets.get(dayKeyOf(day.getTime())) ?? 0);
+}
+
+/**
+ * Agrupa as leituras em energia (kWh) por hora do dia (0-23), só para o dia
+ * de hoje. Usado pelo gráfico de "Hoje".
+ */
+export function bucketKwhByHourToday(readings: PowerReading[]): number[] {
+  const buckets = new Array(24).fill(0);
+
+  for (let i = 1; i < readings.length; i++) {
+    const prev = readings[i - 1];
+    const curr = readings[i];
+    const hoursElapsed = (curr.timestamp - prev.timestamp) / (1000 * 60 * 60);
+    if (hoursElapsed <= 0 || hoursElapsed > MAX_GAP_HOURS) continue;
+
+    const avgWatts = (prev.watts + curr.watts) / 2;
+    const kwh = (avgWatts * hoursElapsed) / 1000;
+    buckets[hourKeyOf(curr.timestamp)] += kwh;
+  }
+
+  return buckets;
+}
+
+/**
+ * Calcula a potência média (W) por hora do dia (0-23), considerando todas as
+ * leituras passadas (normalmente os últimos N dias) — dá o "perfil" de
+ * consumo ao longo de um dia típico. Serve de base pra futuramente comparar
+ * com o consumo atual (ex: detecção de anomalia por padrão de horário).
+ */
+export function averageWattsByHourOfDay(readings: PowerReading[]): number[] {
+  const sums = new Array(24).fill(0);
+  const counts = new Array(24).fill(0);
+
+  for (const reading of readings) {
+    const hour = hourKeyOf(reading.timestamp);
+    sums[hour] += reading.watts;
+    counts[hour] += 1;
+  }
+
+  return sums.map((sum, hour) => (counts[hour] > 0 ? sum / counts[hour] : 0));
 }
 
 /** Lê a tarifa atual (R$/kWh) salva no Firebase. */

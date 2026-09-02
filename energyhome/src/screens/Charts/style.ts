@@ -48,99 +48,32 @@ export const styles = StyleSheet.create({
   periodTextActive: {
     color: colors.primary,
   },
-  energyFlowCard: {
+  card: {
     backgroundColor: colors.surfaceContainerLowest,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: `${colors.outlineVariant}4D`,
     padding: 20,
   },
-  energyFlowHeader: {
-    marginBottom: 8,
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.onSurface,
   },
+  sectionValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.primary,
+  },
   sectionSubtitle: {
     fontSize: 13,
     color: colors.onSurfaceVariant,
     marginTop: 2,
-  },
-  axisRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.outlineVariant,
-  },
-  axisLabel: {
-    fontSize: 11,
-    color: colors.onSurfaceVariant,
-  },
-  peakCard: {
-    backgroundColor: colors.surfaceContainerLowest,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: `${colors.outlineVariant}4D`,
-    padding: 20,
-  },
-  peakValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
-    marginTop: 4,
-  },
-  peakValue: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  peakUnit: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.onSurfaceVariant,
-  },
-  peakTrendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-  },
-  peakTrendText: {
-    fontSize: 13,
-    color: colors.error,
-  },
-  breakdownList: {
-    gap: 14,
-    marginTop: 24,
-  },
-  breakdownItem: {
-    gap: 6,
-  },
-  breakdownLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  breakdownLabel: {
-    fontSize: 14,
-    color: colors.onSurface,
-  },
-  breakdownValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.onSurface,
-  },
-  breakdownTrack: {
-    height: 8,
-    borderRadius: 9999,
-    backgroundColor: colors.surfaceContainerLow,
-    overflow: 'hidden',
-  },
-  breakdownFill: {
-    height: '100%',
-    borderRadius: 9999,
+    marginBottom: 4,
   },
 });

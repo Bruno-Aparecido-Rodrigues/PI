@@ -1,87 +1,159 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
-import { ChartCurve } from '../../components/ChartCurve';
+import { BarChart, BarChartDatum } from '../../components/BarChart';
+import {
+  subscribeToReadingsSince,
+  getTariff,
+  startOfTodayMs,
+  startOfDaysAgoMs,
+  startOfMonthMs,
+  bucketKwhByDay,
+  bucketKwhByHourToday,
+  averageWattsByHourOfDay,
+  PowerReading,
+} from '../../services/energyData';
 import { styles } from './style';
 
-const PERIODS = ['Hora', 'Dia', 'Mês'] as const;
+const PERIODS = [
+  { id: 'today', label: 'Hoje' },
+  { id: 'week', label: 'Semana' },
+  { id: 'month', label: 'Mês' },
+] as const;
 
-const BREAKDOWN = [
-  { label: 'Ar-condicionado', value: 45, color: colors.primary },
-  { label: 'Cozinha', value: 22, color: colors.secondaryContainer },
-  { label: 'Entretenimento', value: 18, color: colors.tertiaryContainer },
-];
+type PeriodId = (typeof PERIODS)[number]['id'];
+
+const WEEKDAY_LABELS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+
+function buildDayList(count: number): Date[] {
+  const days: Date[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - i);
+    days.push(date);
+  }
+  return days;
+}
+
+function daysInCurrentMonthSoFar(): Date[] {
+  const now = new Date();
+  const days: Date[] = [];
+  for (let day = 1; day <= now.getDate(); day++) {
+    days.push(new Date(now.getFullYear(), now.getMonth(), day));
+  }
+  return days;
+}
 
 export function ChartsScreen() {
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]>('Mês');
+  const [period, setPeriod] = useState<PeriodId>('week');
+  const [readings, setReadings] = useState<PowerReading[]>([]);
+  const [profileReadings, setProfileReadings] = useState<PowerReading[]>([]);
+  const [tariff, setTariff] = useState(0.85);
+
+  // Janela de leituras usada pelos gráficos de kWh/custo, de acordo com o período escolhido.
+  useEffect(() => {
+    const since =
+      period === 'today' ? startOfTodayMs() : period === 'week' ? startOfDaysAgoMs(6) : startOfMonthMs();
+    const unsubscribe = subscribeToReadingsSince(since, setReadings);
+    return unsubscribe;
+  }, [period]);
+
+  // Últimos 7 dias, sempre, pro gráfico de "Perfil de Consumo por Horário".
+  useEffect(() => {
+    const unsubscribe = subscribeToReadingsSince(startOfDaysAgoMs(6), setProfileReadings);
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    getTariff().then(setTariff);
+  }, []);
+
+  const kwhData: BarChartDatum[] = useMemo(() => {
+    if (period === 'today') {
+      const hourly = bucketKwhByHourToday(readings);
+      const currentHour = new Date().getHours();
+      return hourly.slice(0, currentHour + 1).map((value, hour) => ({
+        label: `${hour}h`,
+        value,
+      }));
+    }
+
+    const days = period === 'week' ? buildDayList(7) : daysInCurrentMonthSoFar();
+    const values = bucketKwhByDay(readings, days);
+    return days.map((day, i) => ({
+      label: period === 'week' ? WEEKDAY_LABELS[day.getDay()] : String(day.getDate()),
+      value: values[i],
+    }));
+  }, [readings, period]);
+
+  const costData: BarChartDatum[] = useMemo(
+    () => kwhData.map((d) => ({ label: d.label, value: d.value * tariff })),
+    [kwhData, tariff]
+  );
+
+  const profileData: BarChartDatum[] = useMemo(() => {
+    const avgWatts = averageWattsByHourOfDay(profileReadings);
+    return avgWatts.map((value, hour) => ({ label: `${hour}h`, value }));
+  }, [profileReadings]);
+
+  const totalKwh = kwhData.reduce((sum, d) => sum + d.value, 0);
+  const totalCost = costData.reduce((sum, d) => sum + d.value, 0);
 
   return (
     <View style={styles.screen}>
       <AppHeader />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.title}>Análise de Consumo</Text>
-            <Text style={styles.subtitle}>Um mergulho profundo no desempenho energético da sua casa.</Text>
-          </View>
+          <Text style={styles.title}>Análise de Consumo</Text>
+          <Text style={styles.subtitle}>Um mergulho no desempenho energético da sua casa.</Text>
         </View>
 
         <View style={styles.periodSelector}>
           {PERIODS.map((p) => (
             <TouchableOpacity
-              key={p}
-              onPress={() => setPeriod(p)}
-              style={[styles.periodButton, period === p && styles.periodButtonActive]}
+              key={p.id}
+              onPress={() => setPeriod(p.id)}
+              style={[styles.periodButton, period === p.id && styles.periodButtonActive]}
             >
-              <Text style={[styles.periodText, period === p && styles.periodTextActive]}>{p}</Text>
+              <Text style={[styles.periodText, period === p.id && styles.periodTextActive]}>{p.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        <View style={styles.energyFlowCard}>
-          <View style={styles.energyFlowHeader}>
-            <Text style={styles.sectionTitle}>Fluxo de Energia</Text>
-            <Text style={styles.sectionSubtitle}>Consumo vs. Período Anterior (kWh)</Text>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.sectionTitle}>Consumo de Energia</Text>
+            <Text style={styles.sectionValue}>{totalKwh.toFixed(1)} kWh</Text>
           </View>
-          <ChartCurve height={180} path="M0,190 Q100,140 200,160 T400,110 T600,140 T800,100" />
-          <View style={styles.axisRow}>
-            {['00:00', '06:00', '12:00', '18:00', '23:59'].map((t) => (
-              <Text key={t} style={styles.axisLabel}>{t}</Text>
-            ))}
-          </View>
+          <Text style={styles.sectionSubtitle}>
+            {period === 'today' ? 'Por hora, hoje' : period === 'week' ? 'Por dia, últimos 7 dias' : 'Por dia, este mês'}
+          </Text>
+          <BarChart data={kwhData} valueFormatter={(v) => v.toFixed(1)} />
         </View>
 
-        <View style={styles.peakCard}>
-          <Text style={styles.sectionTitle}>Pico de Uso</Text>
-          <View style={styles.peakValueRow}>
-            <Text style={styles.peakValue}>4.8</Text>
-            <Text style={styles.peakUnit}>kWh</Text>
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.sectionTitle}>Custo Estimado</Text>
+            <Text style={styles.sectionValue}>R$ {totalCost.toFixed(2).replace('.', ',')}</Text>
           </View>
-          <View style={styles.peakTrendRow}>
-            <MaterialIcons name="trending-up" size={16} color={colors.error} />
-            <Text style={styles.peakTrendText}>12% a mais que ontem</Text>
-          </View>
+          <Text style={styles.sectionSubtitle}>Consumo × tarifa atual (R$ {tariff.toFixed(2).replace('.', ',')}/kWh)</Text>
+          <BarChart
+            data={costData}
+            barColor={colors.tertiary}
+            valueFormatter={(v) => `R$${v.toFixed(1)}`}
+          />
+        </View>
 
-          <View style={styles.breakdownList}>
-            {BREAKDOWN.map((item) => (
-              <View key={item.label} style={styles.breakdownItem}>
-                <View style={styles.breakdownLabelRow}>
-                  <Text style={styles.breakdownLabel}>{item.label}</Text>
-                  <Text style={styles.breakdownValue}>{item.value}%</Text>
-                </View>
-                <View style={styles.breakdownTrack}>
-                  <View
-                    style={[
-                      styles.breakdownFill,
-                      { width: `${item.value}%`, backgroundColor: item.color },
-                    ]}
-                  />
-                </View>
-              </View>
-            ))}
-          </View>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Perfil de Consumo por Horário</Text>
+          <Text style={styles.sectionSubtitle}>Potência média em cada hora do dia, últimos 7 dias</Text>
+          <BarChart
+            data={profileData}
+            barColor={colors.secondary}
+            valueFormatter={(v) => `${Math.round(v)}W`}
+          />
         </View>
       </ScrollView>
     </View>

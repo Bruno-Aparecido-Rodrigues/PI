@@ -29,7 +29,6 @@ yarn-error.*
 # Env
 .env*.local
 
-# Chaves e credenciais reais (não versionar) — use os arquivos .example.ts
-# como modelo e preencha uma cópia local sem o sufixo "example".
 src/services/firebaseConfig.ts
 src/constants/googleAuth.ts
+scripts/seedFakeData.mjs

@@ -13,7 +13,7 @@ export function AppHeader({ hubOnline = true }: AppHeaderProps) {
     <View style={styles.container}>
       <View style={styles.left}>
         <MaterialIcons name="bolt" size={22} color={colors.primary} />
-        <Text style={styles.brandText}>EnergyHome</Text>
+        <Text style={styles.brandText}>A.C.D.C</Text>
       </View>
 
       <View style={styles.right}>
