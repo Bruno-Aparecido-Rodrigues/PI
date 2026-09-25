@@ -139,6 +139,36 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 24,
   },
+  emptyStateFull: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.onSurface,
+    marginTop: 12,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: colors.onSurfaceVariant,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  emptyButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+  },
+  emptyButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.onPrimary,
+  },
   section: {
     gap: 12,
   },

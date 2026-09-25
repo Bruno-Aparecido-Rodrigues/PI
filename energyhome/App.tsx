@@ -9,7 +9,8 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges((user) => {
       if (user) {
-        registerForPushNotifications(user.uid);
+        //notificações desativadas temporariamenete para teste
+        //registerForPushNotifications(user.uid);
       }
     });
     return unsubscribe;

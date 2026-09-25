@@ -3,8 +3,9 @@ import { colors } from '../../constants/colors';
 
 export const styles = StyleSheet.create({
   container: {
-    height: 84,
+    minHeight: 84,
     paddingHorizontal: 16,
+    paddingBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -31,20 +32,35 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: `${colors.tertiary}1A`,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 9999,
+  },
+  statusPillOnline: {
+    backgroundColor: `${colors.tertiary}1A`,
+  },
+  statusPillOffline: {
+    backgroundColor: `${colors.error}1A`,
   },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  statusDotOnline: {
     backgroundColor: colors.tertiary,
+  },
+  statusDotOffline: {
+    backgroundColor: colors.error,
   },
   statusText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  statusTextOnline: {
     color: colors.tertiary,
+  },
+  statusTextOffline: {
+    color: colors.error,
   },
 });

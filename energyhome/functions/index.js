@@ -32,20 +32,32 @@ const ALERT_TEMPLATES = {
   },
 };
 
-// Dispara toda vez que um novo registro é criado em /hub/alerts/{alertId}.
-exports.onNewAlert = onValueCreated('/hub/alerts/{alertId}', async (event) => {
+// Dispara toda vez que um novo registro é criado em /hubs/{hubId}/alerts/{alertId}.
+exports.onNewAlert = onValueCreated('/hubs/{hubId}/alerts/{alertId}', async (event) => {
+  const { hubId } = event.params;
   const alert = event.data.val();
   const template = ALERT_TEMPLATES[alert?.templateId] ?? {
     title: 'Alerta do Sistema',
     description: 'Uma notificação foi registrada pelo hub.',
   };
 
-  const tokensSnapshot = await admin.database().ref('pushTokens').once('value');
-  const tokensByUser = tokensSnapshot.val() ?? {};
-  const tokens = Object.values(tokensByUser).filter(Boolean);
+  // Só notifica os donos DESSE hub específico, não todo mundo do app.
+  const ownersSnapshot = await admin.database().ref(`hubs/${hubId}/owners`).once('value');
+  const owners = ownersSnapshot.val() ?? {};
+  const uids = Object.keys(owners);
+
+  if (uids.length === 0) {
+    console.log(`Hub ${hubId} não tem dono registrado — ninguém pra notificar.`);
+    return;
+  }
+
+  const tokenReads = await Promise.all(
+    uids.map((uid) => admin.database().ref(`pushTokens/${uid}`).once('value'))
+  );
+  const tokens = tokenReads.map((snap) => snap.val()).filter(Boolean);
 
   if (tokens.length === 0) {
-    console.log('Nenhum token registrado — ninguém pra notificar.');
+    console.log(`Nenhum token de push registrado pros donos do hub ${hubId}.`);
     return;
   }
 
@@ -54,7 +66,7 @@ exports.onNewAlert = onValueCreated('/hub/alerts/{alertId}', async (event) => {
     sound: 'default',
     title: template.title,
     body: template.description,
-    data: { templateId: alert?.templateId },
+    data: { hubId, templateId: alert?.templateId },
   }));
 
   const response = await fetch('https://exp.host/--/api/v2/push/send', {

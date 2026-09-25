@@ -1,11 +1,13 @@
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
 import { PowerUsageCard } from '../../components/PowerUsageCard';
 import { BillEstimateCard } from '../../components/BillEstimateCard';
 import { StatCard } from '../../components/StatCard';
 import { useEnergyData } from '../../hooks/useEnergyData';
+import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { styles } from './style';
 
 interface DashboardScreenProps {
@@ -13,7 +15,26 @@ interface DashboardScreenProps {
 }
 
 export function DashboardScreen({ navigation }: DashboardScreenProps) {
-  const { currentWatts, todayKwh, monthKwh, estimatedBill, tariff, peakWatts } = useEnergyData();
+  const { hubId, loading: hubLoading } = useCurrentHub();
+  const { currentWatts, todayKwh, monthKwh, estimatedBill, tariff, peakWatts } = useEnergyData(hubId);
+
+  if (!hubLoading && !hubId) {
+    return (
+      <View style={styles.screen}>
+        <AppHeader />
+        <View style={styles.emptyState}>
+          <MaterialIcons name="sensors-off" size={48} color={colors.onSurfaceVariant} />
+          <Text style={styles.emptyTitle}>Nenhum dispositivo pareado</Text>
+          <Text style={styles.emptySubtitle}>
+            Adicione o seu hub pra começar a ver os dados de consumo aqui.
+          </Text>
+          <TouchableOpacity style={styles.emptyButton} onPress={() => navigation.navigate('AddDevice')}>
+            <Text style={styles.emptyButtonText}>Adicionar Dispositivo</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   const hasCurrentReading = currentWatts !== null;
   const projectedBill = estimatedBill * 1.3; // estimativa simples até o fim do mês

@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
 import { BarChart, BarChartDatum } from '../../components/BarChart';
+import { useCurrentHub } from '../../hooks/useCurrentHub';
 import {
   subscribeToReadingsSince,
   getTariff,
@@ -46,7 +48,8 @@ function daysInCurrentMonthSoFar(): Date[] {
   return days;
 }
 
-export function ChartsScreen() {
+export function ChartsScreen({ navigation }: { navigation: any }) {
+  const { hubId, loading: hubLoading } = useCurrentHub();
   const [period, setPeriod] = useState<PeriodId>('week');
   const [readings, setReadings] = useState<PowerReading[]>([]);
   const [profileReadings, setProfileReadings] = useState<PowerReading[]>([]);
@@ -54,21 +57,24 @@ export function ChartsScreen() {
 
   // Janela de leituras usada pelos gráficos de kWh/custo, de acordo com o período escolhido.
   useEffect(() => {
+    if (!hubId) return;
     const since =
       period === 'today' ? startOfTodayMs() : period === 'week' ? startOfDaysAgoMs(6) : startOfMonthMs();
-    const unsubscribe = subscribeToReadingsSince(since, setReadings);
+    const unsubscribe = subscribeToReadingsSince(hubId, since, setReadings);
     return unsubscribe;
-  }, [period]);
+  }, [period, hubId]);
 
   // Últimos 7 dias, sempre, pro gráfico de "Perfil de Consumo por Horário".
   useEffect(() => {
-    const unsubscribe = subscribeToReadingsSince(startOfDaysAgoMs(6), setProfileReadings);
+    if (!hubId) return;
+    const unsubscribe = subscribeToReadingsSince(hubId, startOfDaysAgoMs(6), setProfileReadings);
     return unsubscribe;
-  }, []);
+  }, [hubId]);
 
   useEffect(() => {
-    getTariff().then(setTariff);
-  }, []);
+    if (!hubId) return;
+    getTariff(hubId).then(setTariff);
+  }, [hubId]);
 
   const kwhData: BarChartDatum[] = useMemo(() => {
     if (period === 'today') {
@@ -100,6 +106,22 @@ export function ChartsScreen() {
 
   const totalKwh = kwhData.reduce((sum, d) => sum + d.value, 0);
   const totalCost = costData.reduce((sum, d) => sum + d.value, 0);
+
+  if (!hubLoading && !hubId) {
+    return (
+      <View style={styles.screen}>
+        <AppHeader />
+        <View style={styles.emptyState}>
+          <MaterialIcons name="sensors-off" size={48} color={colors.onSurfaceVariant} />
+          <Text style={styles.emptyTitle}>Nenhum dispositivo pareado</Text>
+          <Text style={styles.emptySubtitle}>Adicione um hub pra ver os gráficos de consumo.</Text>
+          <TouchableOpacity style={styles.emptyButton} onPress={() => navigation.navigate('AddDevice')}>
+            <Text style={styles.emptyButtonText}>Adicionar Dispositivo</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
@@ -142,7 +164,7 @@ export function ChartsScreen() {
           <BarChart
             data={costData}
             barColor={colors.tertiary}
-            valueFormatter={(v) => `R$${v.toFixed(1)}`}
+            valueFormatter={(v) => v.toFixed(1)}
           />
         </View>
 

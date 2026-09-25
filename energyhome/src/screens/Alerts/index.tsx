@@ -5,6 +5,7 @@ import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
 import { AlertCard } from '../../components/AlertCard';
 import { subscribeToAlerts, markAlertAsRead, Alert } from '../../services/alertsData';
+import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { styles } from './style';
 
 const PERIOD_FILTERS = [
@@ -74,16 +75,18 @@ function groupByDay(alerts: Alert[]): { label: string; alerts: Alert[] }[] {
   return groups;
 }
 
-export function AlertsScreen() {
+export function AlertsScreen({ navigation }: { navigation: any }) {
+  const { hubId, loading: hubLoading } = useCurrentHub();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilterId>('7d');
   const [statusFilter, setStatusFilter] = useState<StatusFilterId>('all');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   React.useEffect(() => {
-    const unsubscribe = subscribeToAlerts(setAlerts);
+    if (!hubId) return;
+    const unsubscribe = subscribeToAlerts(hubId, setAlerts);
     return unsubscribe;
-  }, []);
+  }, [hubId]);
 
   const filteredAlerts = useMemo(() => {
     const byDate = filterByDate(alerts, periodFilter);
@@ -98,6 +101,22 @@ export function AlertsScreen() {
   const periodLabel = PERIOD_FILTERS.find((f) => f.id === periodFilter)?.label;
   const statusLabel = STATUS_FILTERS.find((f) => f.id === statusFilter)?.label;
   const filterSummary = statusFilter === 'all' ? periodLabel : `${periodLabel} · ${statusLabel}`;
+
+  if (!hubLoading && !hubId) {
+    return (
+      <View style={styles.screen}>
+        <AppHeader />
+        <View style={styles.emptyStateFull}>
+          <MaterialIcons name="sensors-off" size={48} color={colors.onSurfaceVariant} />
+          <Text style={styles.emptyTitle}>Nenhum dispositivo pareado</Text>
+          <Text style={styles.emptySubtitle}>Adicione um hub pra começar a receber alertas.</Text>
+          <TouchableOpacity style={styles.emptyButton} onPress={() => navigation.navigate('AddDevice')}>
+            <Text style={styles.emptyButtonText}>Adicionar Dispositivo</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screen}>
@@ -147,7 +166,7 @@ export function AlertsScreen() {
                     minute: '2-digit',
                   })}
                   read={alert.read}
-                  onPress={() => !alert.read && markAlertAsRead(alert.id)}
+                  onPress={() => !alert.read && hubId && markAlertAsRead(hubId, alert.id)}
                 />
               ))}
             </View>

@@ -3,14 +3,14 @@ import { View, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../constants/colors';
+import { useCurrentHub } from '../../hooks/useCurrentHub';
+import { useHubStatus } from '../../hooks/useHubStatus';
 import { styles } from './style';
 
-interface AppHeaderProps {
-  hubOnline?: boolean;
-}
-
-export function AppHeader({ hubOnline = true }: AppHeaderProps) {
+export function AppHeader() {
   const insets = useSafeAreaInsets();
+  const { hubId } = useCurrentHub();
+  const { online } = useHubStatus(hubId);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
@@ -20,14 +20,15 @@ export function AppHeader({ hubOnline = true }: AppHeaderProps) {
       </View>
 
       <View style={styles.right}>
-        {hubOnline && (
-          <View style={styles.statusPill}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Hub Conectado</Text>
+        {hubId && (
+          <View style={[styles.statusPill, online ? styles.statusPillOnline : styles.statusPillOffline]}>
+            <View style={[styles.statusDot, online ? styles.statusDotOnline : styles.statusDotOffline]} />
+            <Text style={[styles.statusText, online ? styles.statusTextOnline : styles.statusTextOffline]}>
+              {online ? 'Hub Conectado' : 'Hub Desconectado'}
+            </Text>
           </View>
         )}
       </View>
     </View>
   );
 }
-

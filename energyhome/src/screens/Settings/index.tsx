@@ -3,40 +3,41 @@ import { View, Text, TextInput, Switch, ScrollView, TouchableOpacity, ActivityIn
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
-import { logout, deleteAccount } from '../../services/authIntegration';
+import { logout, deleteAccount, getCurrentUser } from '../../services/authIntegration';
 import { getTariff, setTariff as saveTariff } from '../../services/energyData';
+import { unpairHub } from '../../services/hubPairing';
+import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { styles } from './style';
-
-const DEVICES = [
-  { icon: 'sensors' as const, label: 'Hub', id: 'EH-2024-X9' },
-];
 
 interface SettingsScreenProps {
   navigation: any;
 }
 
 export function SettingsScreen({ navigation }: SettingsScreenProps) {
+  const { hubId, loading: hubLoading } = useCurrentHub();
   const [tariff, setTariff] = useState('0.85');
   const [savingTariff, setSavingTariff] = useState(false);
   const [offPeakDiscount, setOffPeakDiscount] = useState(true);
-  const [confirmingDeviceId, setConfirmingDeviceId] = useState<string | null>(null);
+  const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [tariffFeedback, setTariffFeedback] = useState('');
   const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
-    getTariff().then((value) => setTariff(String(value)));
-  }, []);
+    if (!hubId) return;
+    getTariff(hubId).then((value) => setTariff(String(value)));
+  }, [hubId]);
 
   async function handleSaveTariff() {
+    if (!hubId) return;
     const parsed = Number(tariff.replace(',', '.'));
     if (Number.isNaN(parsed) || parsed <= 0) {
       setTariffFeedback('Digite um valor de tarifa válido.');
       return;
     }
     setSavingTariff(true);
-    await saveTariff(parsed);
+    await saveTariff(hubId, parsed);
     setSavingTariff(false);
     setTariffFeedback('Tarifa registrada.');
   }
@@ -46,13 +47,20 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
     navigation.replace('Login');
   }
 
-  function handleDisconnect(deviceId: string) {
-    if (confirmingDeviceId !== deviceId) {
-      setConfirmingDeviceId(deviceId);
+  async function handleDisconnect() {
+    if (!hubId) return;
+
+    if (!confirmingDisconnect) {
+      setConfirmingDisconnect(true);
       return;
     }
-    setFeedback(`Dispositivo ${deviceId} desconectado.`);
-    setConfirmingDeviceId(null);
+
+    const user = getCurrentUser();
+    if (!user) return;
+
+    await unpairHub(user.uid, hubId);
+    setConfirmingDisconnect(false);
+    setFeedback('Dispositivo desconectado.');
   }
 
   async function handleDeleteAccount() {
@@ -97,12 +105,13 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
                 keyboardType="decimal-pad"
                 value={tariff}
                 onChangeText={setTariff}
+                editable={!!hubId}
               />
             </View>
             <TouchableOpacity
               style={styles.saveTariffButton}
               onPress={handleSaveTariff}
-              disabled={savingTariff}
+              disabled={savingTariff || !hubId}
             >
               {savingTariff ? (
                 <ActivityIndicator size="small" color={colors.onPrimary} />
@@ -131,31 +140,38 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
               <Text style={styles.cardTitle}>Dispositivos Conectados</Text>
             </View>
             <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText}>
-                {DEVICES.length} {DEVICES.length === 1 ? 'Ativo' : 'Ativos'}
-              </Text>
+              <Text style={styles.activeBadgeText}>{hubId ? '1 Ativo' : '0 Ativos'}</Text>
             </View>
           </View>
 
           <View style={styles.deviceList}>
-            {DEVICES.map((device) => (
-              <View key={device.id} style={styles.deviceRow}>
+            {hubId ? (
+              <View style={styles.deviceRow}>
                 <View style={styles.deviceLeft}>
                   <View style={styles.deviceIconBox}>
-                    <MaterialIcons name={device.icon} size={20} color={colors.onSurfaceVariant} />
+                    <MaterialIcons name="sensors" size={20} color={colors.onSurfaceVariant} />
                   </View>
                   <View>
-                    <Text style={styles.deviceLabel}>{device.label}</Text>
-                    <Text style={styles.deviceId}>ID: {device.id}</Text>
+                    <Text style={styles.deviceLabel}>Hub</Text>
+                    <Text style={styles.deviceId}>ID: {hubId}</Text>
                   </View>
                 </View>
-                <TouchableOpacity onPress={() => handleDisconnect(device.id)}>
+                <TouchableOpacity onPress={handleDisconnect}>
                   <Text style={styles.disconnectText}>
-                    {confirmingDeviceId === device.id ? 'Confirmar?' : 'Desconectar'}
+                    {confirmingDisconnect ? 'Confirmar?' : 'Desconectar'}
                   </Text>
                 </TouchableOpacity>
               </View>
-            ))}
+            ) : (
+              <TouchableOpacity
+                style={styles.addDeviceRow}
+                onPress={() => navigation.navigate('AddDevice')}
+                disabled={hubLoading}
+              >
+                <MaterialIcons name="add-circle-outline" size={20} color={colors.primary} />
+                <Text style={styles.addDeviceText}>Adicionar Dispositivo</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 

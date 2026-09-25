@@ -6,6 +6,7 @@ import * as Google from 'expo-auth-session/providers/google';
 import { colors } from '../../constants/colors';
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '../../constants/googleAuth';
 import { login, loginWithGoogleIdToken } from '../../services/authIntegration';
+import { getUserHubs } from '../../services/hubPairing';
 import { styles } from './style';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -40,6 +41,11 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     }
   }, [googleResponse]);
 
+  async function goToAppOrPairing(uid: string) {
+    const hubs = await getUserHubs(uid);
+    navigation.replace(hubs.length > 0 ? 'MainTabs' : 'AddDevice');
+  }
+
   async function handleGoogleLogin(idToken: string) {
     setErrorMessage('');
     setInfoMessage('');
@@ -52,7 +58,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       return;
     }
 
-    navigation.replace('MainTabs');
+    await goToAppOrPairing(result.user.uid);
   }
 
   async function handleLogin() {
@@ -73,7 +79,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       return;
     }
 
-    navigation.replace('MainTabs');
+    await goToAppOrPairing(result.user.uid);
   }
 
   return (

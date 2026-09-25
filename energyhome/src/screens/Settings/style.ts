@@ -116,6 +116,17 @@ export const styles = StyleSheet.create({
   deviceList: {
     gap: 4,
   },
+  addDeviceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+  },
+  addDeviceText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
   deviceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

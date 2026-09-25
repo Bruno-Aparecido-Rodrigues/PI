@@ -6,21 +6,25 @@ const db = getDatabase(app);
 // ─────────────────────────────────────────────────────────────────────────
 // Estrutura de dados no Firebase Realtime Database (contrato com o ESP32):
 //
-// /hub/current
+// /hubs/{hubId}/current
 //    { watts: number, updatedAt: number (timestamp em ms) }
 //    -> o ESP32 SOBRESCREVE esse valor a cada leitura (ex: a cada 2-5s).
 //       É o que alimenta o "Consumo Atual" em tempo real no Dashboard.
 //
-// /hub/readings/{pushId}
+// /hubs/{hubId}/readings/{pushId}
 //    { watts: number, timestamp: number (ms) }
 //    -> o ESP32 ADICIONA um novo registro periodicamente (ex: a cada 1 min),
 //       usando push() do Firebase. É o histórico usado para calcular kWh
 //       (energia = integral da potência ao longo do tempo).
 //
-// /hub/settings/tariff
+// /hubs/{hubId}/settings/tariff
 //    number (R$/kWh)
 //    -> definido pelo app (tela de Ajustes), lido tanto pelo app quanto,
 //       futuramente, pelo próprio ESP32 se quiser mostrar algo localmente.
+//
+// {hubId} é o endereço MAC do ESP32 (sanitizado, sem ":"), único por
+// dispositivo. Ver src/services/hubPairing.ts pra como ele é associado à
+// conta do usuário.
 // ─────────────────────────────────────────────────────────────────────────
 
 export interface PowerReading {
@@ -28,21 +32,44 @@ export interface PowerReading {
   timestamp: number;
 }
 
-/** Observa a potência atual (Watts), atualizada em tempo real pelo ESP32. */
-export function subscribeToCurrentPower(callback: (watts: number | null) => void) {
-  const currentRef = ref(db, 'hub/current');
+/** Observa a potência atual (Watts) de um hub, atualizada em tempo real pelo ESP32. */
+export function subscribeToCurrentPower(hubId: string, callback: (watts: number | null) => void) {
+  const currentRef = ref(db, `hubs/${hubId}/current`);
   return onValue(currentRef, (snapshot) => {
     const data = snapshot.val();
     callback(typeof data?.watts === 'number' ? data.watts : null);
   });
 }
 
-/** Observa todas as leituras de histórico a partir de um timestamp (ms). */
+export interface CurrentReading {
+  watts: number;
+  updatedAt: number;
+}
+
+/** Observa a leitura atual completa (watts + updatedAt), usada pra saber se o hub está online. */
+export function subscribeToCurrentReading(hubId: string, callback: (reading: CurrentReading | null) => void) {
+  const currentRef = ref(db, `hubs/${hubId}/current`);
+  return onValue(currentRef, (snapshot) => {
+    const data = snapshot.val();
+    if (typeof data?.watts === 'number' && typeof data?.updatedAt === 'number') {
+      callback({ watts: data.watts, updatedAt: data.updatedAt });
+    } else {
+      callback(null);
+    }
+  });
+}
+
+/** Observa todas as leituras de histórico de um hub a partir de um timestamp (ms). */
 export function subscribeToReadingsSince(
+  hubId: string,
   sinceTimestamp: number,
   callback: (readings: PowerReading[]) => void
 ) {
-  const readingsQuery = query(ref(db, 'hub/readings'), orderByChild('timestamp'), startAt(sinceTimestamp));
+  const readingsQuery = query(
+    ref(db, `hubs/${hubId}/readings`),
+    orderByChild('timestamp'),
+    startAt(sinceTimestamp)
+  );
   return onValue(readingsQuery, (snapshot) => {
     const readings: PowerReading[] = [];
     snapshot.forEach((child) => {
@@ -154,7 +181,7 @@ export function bucketKwhByHourToday(readings: PowerReading[]): number[] {
 
 /**
  * Calcula a potência média (W) por hora do dia (0-23), considerando todas as
- * leituras passadas (normalmente os últimos N dias) — dá o "perfil" de
+ * leituras passadas (normalmente os últimos N dias), dá o "perfil" de
  * consumo ao longo de um dia típico. Serve de base pra futuramente comparar
  * com o consumo atual (ex: detecção de anomalia por padrão de horário).
  */
@@ -171,23 +198,23 @@ export function averageWattsByHourOfDay(readings: PowerReading[]): number[] {
   return sums.map((sum, hour) => (counts[hour] > 0 ? sum / counts[hour] : 0));
 }
 
-/** Lê a tarifa atual (R$/kWh) salva no Firebase. */
-export async function getTariff(): Promise<number> {
-  const snapshot = await get(ref(db, 'hub/settings/tariff'));
+/** Lê a tarifa atual (R$/kWh) salva no Firebase, pra um hub específico. */
+export async function getTariff(hubId: string): Promise<number> {
+  const snapshot = await get(ref(db, `hubs/${hubId}/settings/tariff`));
   const value = snapshot.val();
   return typeof value === 'number' ? value : 0.85;
 }
 
 /** Observa a tarifa em tempo real (útil se quiser refletir mudanças na hora). */
-export function subscribeToTariff(callback: (tariff: number) => void) {
-  const tariffRef = ref(db, 'hub/settings/tariff');
+export function subscribeToTariff(hubId: string, callback: (tariff: number) => void) {
+  const tariffRef = ref(db, `hubs/${hubId}/settings/tariff`);
   return onValue(tariffRef, (snapshot) => {
     const value = snapshot.val();
     callback(typeof value === 'number' ? value : 0.85);
   });
 }
 
-/** Salva a tarifa (R$/kWh) no Firebase. */
-export async function setTariff(tariff: number): Promise<void> {
-  await set(ref(db, 'hub/settings/tariff'), tariff);
+/** Salva a tarifa (R$/kWh) no Firebase, pra um hub específico. */
+export async function setTariff(hubId: string, tariff: number): Promise<void> {
+  await set(ref(db, `hubs/${hubId}/settings/tariff`), tariff);
 }

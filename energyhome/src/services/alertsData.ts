@@ -7,7 +7,7 @@ const db = getDatabase(app);
 // ─────────────────────────────────────────────────────────────────────────
 // Estrutura de dados no Firebase Realtime Database:
 //
-// /hub/alerts/{pushId}
+// /hubs/{hubId}/alerts/{pushId}
 //    {
 //      templateId: string,   // chave de src/constants/alertMessages.ts
 //      timestamp: number,    // ms desde 1970
@@ -15,7 +15,7 @@ const db = getDatabase(app);
 //    }
 //
 // Quem grava aqui é o ESP32 (ou uma Cloud Function que analisa as leituras)
-// ao detectar uma anomalia — sempre usando um templateId válido.
+// ao detectar uma anomalia, sempre usando um templateId válido.
 // ─────────────────────────────────────────────────────────────────────────
 
 export interface Alert {
@@ -27,9 +27,9 @@ export interface Alert {
   read: boolean;
 }
 
-/** Observa todos os alertas em tempo real, do mais recente pro mais antigo. */
-export function subscribeToAlerts(callback: (alerts: Alert[]) => void) {
-  const alertsRef = ref(db, 'hub/alerts');
+/** Observa todos os alertas de um hub em tempo real, do mais recente pro mais antigo. */
+export function subscribeToAlerts(hubId: string, callback: (alerts: Alert[]) => void) {
+  const alertsRef = ref(db, `hubs/${hubId}/alerts`);
   return onValue(alertsRef, (snapshot) => {
     const alerts: Alert[] = [];
     snapshot.forEach((child) => {
@@ -52,6 +52,6 @@ export function subscribeToAlerts(callback: (alerts: Alert[]) => void) {
 }
 
 /** Marca um alerta como visualizado. */
-export async function markAlertAsRead(alertId: string): Promise<void> {
-  await update(ref(db, `hub/alerts/${alertId}`), { read: true });
+export async function markAlertAsRead(hubId: string, alertId: string): Promise<void> {
+  await update(ref(db, `hubs/${hubId}/alerts/${alertId}`), { read: true });
 }
