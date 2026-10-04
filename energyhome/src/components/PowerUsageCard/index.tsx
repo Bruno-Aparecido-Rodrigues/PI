@@ -9,9 +9,12 @@ interface PowerUsageCardProps {
   watts: number;
   comparisonLabel: string;
   trendDown?: boolean;
+  /** Leituras recentes de Watts (mais antiga primeiro), pra desenhar a curva
+   *  "ao vivo" com o dado real em vez de um traço decorativo fixo. */
+  history?: number[];
 }
 
-export function PowerUsageCard({ watts, comparisonLabel, trendDown = true }: PowerUsageCardProps) {
+export function PowerUsageCard({ watts, comparisonLabel, trendDown = true, history }: PowerUsageCardProps) {
   return (
     <View style={styles.container}>
       <View style={styles.liveBadge}>
@@ -35,7 +38,7 @@ export function PowerUsageCard({ watts, comparisonLabel, trendDown = true }: Pow
         </Text>
       </View>
 
-      <ChartCurve height={140} />
+      <ChartCurve height={140} data={history} />
     </View>
   );
 }

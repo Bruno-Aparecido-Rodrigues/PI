@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
 import { subscribeToCurrentReading } from '../services/energyData';
 
-// Se o hub não manda uma leitura nova em 30 segundos, consideramos ele
-// offline. O firmware de teste manda a cada 5s, e o ESP32 "de produção"
-// (com o sensor) deve manter esse ritmo também, ajuste esse valor se a
-// frequência real de envio mudar.
-const OFFLINE_THRESHOLD_MS = 30000;
+// Se o hub não manda uma leitura nova em 10 segundos, consideramos ele
+// offline. O firmware manda /current a cada 3s, então 10s já dá uma boa
+// margem sem acusar "desconectado" por causa de um único envio atrasado
+const OFFLINE_THRESHOLD_MS = 10000;
 
 export interface HubStatus {
   online: boolean;
@@ -37,7 +36,7 @@ export function useHubStatus(hubId: string | null): HubStatus {
       setOnline(lastUpdatedAt !== null && Date.now() - lastUpdatedAt < OFFLINE_THRESHOLD_MS);
     }
     check();
-    const interval = setInterval(check, 5000);
+    const interval = setInterval(check, 2000);
     return () => clearInterval(interval);
   }, [lastUpdatedAt]);
 

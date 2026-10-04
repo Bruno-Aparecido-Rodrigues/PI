@@ -16,7 +16,7 @@ interface DashboardScreenProps {
 
 export function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { hubId, loading: hubLoading } = useCurrentHub();
-  const { currentWatts, todayKwh, monthKwh, estimatedBill, tariff, peakWatts } = useEnergyData(hubId);
+  const { currentWatts, wattsHistory, todayKwh, monthKwh, estimatedBill, tariff, peakWatts } = useEnergyData(hubId);
 
   if (!hubLoading && !hubId) {
     return (
@@ -55,6 +55,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
           watts={hasCurrentReading ? Math.round(currentWatts!) : 0}
           comparisonLabel={hasCurrentReading ? 'Leitura em tempo real do Hub' : 'Aguardando leitura do Hub…'}
           trendDown
+          history={wattsHistory}
         />
 
         <BillEstimateCard
