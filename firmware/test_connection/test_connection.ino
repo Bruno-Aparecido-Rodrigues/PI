@@ -37,7 +37,7 @@
 // >>> PREENCHA AQUI <<<
 const char* WIFI_SSID = "SEU_WIFI";
 const char* WIFI_PASSWORD = "SUA_SENHA_WIFI";
-const char* DATABASE_URL = "https://pi-energia-db-default-rtdb.firebaseio.com";
+const char* DATABASE_URL = "banco";
 
 // ============================================================================
 // MAC VIRTUAL
