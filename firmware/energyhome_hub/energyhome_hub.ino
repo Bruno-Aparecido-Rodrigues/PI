@@ -60,9 +60,9 @@
 #include "esp_wifi.h"
 #include "time.h"
 
-const char* WIFI_SSID = "MARGARETE2G";
-const char* WIFI_PASSWORD = "15220108";
-const char* DATABASE_URL = "https://pi-energia-db-default-rtdb.firebaseio.com";
+const char* WIFI_SSID = "wifi-nome";
+const char* WIFI_PASSWORD = "senha";
+const char* DATABASE_URL = "banco";
 
 
 // MAC VIRTUAL, necessário porque esta placa não tem MAC de fábrica válido (vem zerado).
