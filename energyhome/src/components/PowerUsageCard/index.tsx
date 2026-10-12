@@ -8,13 +8,27 @@ import { styles } from './style';
 interface PowerUsageCardProps {
   watts: number;
   comparisonLabel: string;
-  trendDown?: boolean;
+  /** Consumo de agora comparado ao normal desse horário: acima (up), abaixo
+   *  (down) ou dentro do normal / sem base de comparação (neutral). */
+  trend?: 'up' | 'down' | 'neutral';
   /** Leituras recentes de Watts (mais antiga primeiro), pra desenhar a curva
    *  "ao vivo" com o dado real em vez de um traço decorativo fixo. */
   history?: number[];
 }
 
-export function PowerUsageCard({ watts, comparisonLabel, trendDown = true, history }: PowerUsageCardProps) {
+const TREND_ICON = {
+  up: 'trending-up',
+  down: 'trending-down',
+  neutral: 'trending-flat',
+} as const;
+
+const TREND_COLOR = {
+  up: colors.error,
+  down: colors.tertiary,
+  neutral: colors.onSurfaceVariant,
+};
+
+export function PowerUsageCard({ watts, comparisonLabel, trend = 'neutral', history }: PowerUsageCardProps) {
   return (
     <View style={styles.container}>
       <View style={styles.liveBadge}>
@@ -28,12 +42,8 @@ export function PowerUsageCard({ watts, comparisonLabel, trendDown = true, histo
       </View>
 
       <View style={styles.trendRow}>
-        <MaterialIcons
-          name={trendDown ? 'trending-down' : 'trending-up'}
-          size={16}
-          color={trendDown ? colors.tertiary : colors.error}
-        />
-        <Text style={[styles.trendText, { color: trendDown ? colors.tertiary : colors.error }]}>
+        <MaterialIcons name={TREND_ICON[trend]} size={16} color={TREND_COLOR[trend]} />
+        <Text style={[styles.trendText, { color: TREND_COLOR[trend] }]}>
           {comparisonLabel}
         </Text>
       </View>

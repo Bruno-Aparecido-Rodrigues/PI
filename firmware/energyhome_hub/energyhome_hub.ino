@@ -18,11 +18,19 @@
   - /hubs/{hubId}/readings    a cada ~60s → histórico usado pra calcular kWh
                                              (ESTE é bufferizado se faltar
                                              internet no momento do envio)
+    Cada leitura leva { watts, energyKwh, timestamp }. O energyKwh é o
+    CONTADOR de energia do próprio PZEM (kWh acumulados desde sempre, igual
+    ao relógio de luz da casa). O app calcula o consumo de um período pela
+    DIFERENÇA desse contador entre duas leituras, o que é exato mesmo que
+    o ESP32 fique um tempo sem mandar nada (o PZEM continua contando
+    enquanto a tomada estiver ligada). Por isso o firmware NUNCA deve
+    chamar pzem.resetEnergy().
 
   Buffer offline como funciona:
   - Cada leitura de /readings que falha ao enviar (sem Wi-Fi, ou o POST deu
     erro) é gravada numa linha do arquivo /buffer.csv na flash (formato
-    simples "watts,timestamp").
+    simples "watts,energyKwh,timestamp"; linhas antigas no formato
+    "watts,timestamp" continuam sendo lidas).
   - A cada volta do loop com Wi-Fi conectado, antes de mandar a leitura
     atual, o firmware tenta esvaziar o buffer (reenviar as leituras
     pendentes, em ordem, mais antiga primeiro).
@@ -30,6 +38,10 @@
     guarda no máximo MAX_BUFFERED_READINGS linhas se passar disso, as
     leituras mais antigas são descartadas (prioriza manter o histórico
     recente a travar o dispositivo).
+  - Se o Firebase RECUSAR uma leitura (HTTP 4xx, ex: regra de segurança),
+    ela é descartada em vez de ir pro buffer: reenviar não adiantaria, e
+    ela travaria a fila pra sempre, bloqueando todas as leituras depois
+    dela.
 
   Fiação do PZEM:
     ESP32 RX2 (GPIO16)  <--  PZEM TX
@@ -85,6 +97,9 @@ unsigned long lastReadingSentAt = 0;
 // Último estado de pareamento confirmado com o Firebase. Usado como
 // "memória" enquanto o Wi-Fi está fora do ar (ver isClaimed()).
 bool cachedClaimed = false;
+
+// Resultado de um envio de /readings (ver sendReading()).
+enum SendResult { SEND_OK, SEND_REJECTED, SEND_FAILED };
 
 
 // Buffer offline (LittleFS)
@@ -145,9 +160,10 @@ void loop() {
 
   if (now - lastReadingSentAt >= READING_INTERVAL_MS) {
     unsigned long long ts = nowUnixMs();
-    bool sent = wifiOk && sendReading(watts, ts);
-    if (!sent) {
-      bufferReading(watts, ts);
+    float energyKwh = readEnergyKwh(); // pode vir NaN se a leitura falhar; aí vai só com watts
+    SendResult result = wifiOk ? sendReading(watts, energyKwh, ts) : SEND_FAILED;
+    if (result == SEND_FAILED) {
+      bufferReading(watts, energyKwh, ts);
     }
     lastReadingSentAt = now;
   }
@@ -234,6 +250,11 @@ float readPowerWatts() {
   return pzem.power();
 }
 
+/** Contador de energia acumulada do PZEM, em kWh (resolução de 1 Wh). */
+float readEnergyKwh() {
+  return pzem.energy();
+}
+
 // ============================================================================
 // Firebase: registered / claimed / current / readings
 // ============================================================================
@@ -300,8 +321,10 @@ void sendCurrent(float watts) {
 }
 
 /** Adiciona um novo registro ao histórico — usado pelo app pra calcular kWh.
- *  Retorna true se o Firebase confirmou o recebimento (HTTP 200). */
-bool sendReading(float watts, unsigned long long timestamp) {
+ *  SEND_OK       = Firebase confirmou (HTTP 200).
+ *  SEND_REJECTED = Firebase recusou de vez (HTTP 4xx): não adianta reenviar.
+ *  SEND_FAILED   = falha de rede/servidor: vale guardar no buffer e tentar depois. */
+SendResult sendReading(float watts, float energyKwh, unsigned long long timestamp) {
   WiFiClientSecure client;
   client.setInsecure();
 
@@ -313,18 +336,29 @@ bool sendReading(float watts, unsigned long long timestamp) {
   http.begin(client, url);
   http.addHeader("Content-Type", "application/json");
 
-  String payload = "{\"watts\": " + String(watts, 1) + ", \"timestamp\": " + String(timestamp) + "}";
+  String payload = "{\"watts\": " + String(watts, 1);
+  if (!isnan(energyKwh)) {
+    payload += ", \"energyKwh\": " + String(energyKwh, 3);
+  }
+  payload += ", \"timestamp\": " + String(timestamp) + "}";
   int httpCode = http.POST(payload);
 
   Serial.print("[/readings] HTTP ");
   Serial.print(httpCode);
   Serial.print(" — ");
   Serial.print(watts, 1);
-  Serial.println(" W (histórico)");
+  Serial.print(" W, contador ");
+  Serial.print(energyKwh, 3);
+  Serial.println(" kWh (histórico)");
 
   http.end();
 
-  return httpCode == 200;
+  if (httpCode == 200) return SEND_OK;
+  if (httpCode >= 400 && httpCode < 500) {
+    Serial.println("  -> recusada pelo Firebase (confira as regras do banco). Leitura descartada.");
+    return SEND_REJECTED;
+  }
+  return SEND_FAILED;
 }
 
 // ============================================================================
@@ -332,8 +366,9 @@ bool sendReading(float watts, unsigned long long timestamp) {
 // enviadas, e reenvia quando a conexão volta.
 // ============================================================================
 
-/** Grava uma leitura pendente no arquivo de buffer (uma linha "watts,timestamp"). */
-void bufferReading(float watts, unsigned long long timestamp) {
+/** Grava uma leitura pendente no arquivo de buffer (uma linha "watts,energyKwh,timestamp").
+ *  Se o contador não pôde ser lido, o campo do meio fica vazio. */
+void bufferReading(float watts, float energyKwh, unsigned long long timestamp) {
   trimBufferIfNeeded();
 
   File file = LittleFS.open(BUFFER_PATH, FILE_APPEND);
@@ -343,6 +378,10 @@ void bufferReading(float watts, unsigned long long timestamp) {
   }
 
   file.print(watts, 1);
+  file.print(",");
+  if (!isnan(energyKwh)) {
+    file.print(energyKwh, 3);
+  }
   file.print(",");
   file.println(String(timestamp));
   file.close();
@@ -427,14 +466,28 @@ void flushBuffer() {
       continue;
     }
 
-    int commaIndex = line.indexOf(',');
-    if (commaIndex < 0) continue; // linha corrompida, descarta
+    // Formato atual: "watts,energyKwh,timestamp" (energyKwh pode estar vazio).
+    // Formato antigo (antes do contador): "watts,timestamp".
+    int firstComma = line.indexOf(',');
+    if (firstComma < 0) continue; // linha corrompida, descarta
+    int secondComma = line.indexOf(',', firstComma + 1);
 
-    float watts = line.substring(0, commaIndex).toFloat();
-    unsigned long long ts = strtoull(line.substring(commaIndex + 1).c_str(), nullptr, 10);
+    float watts = line.substring(0, firstComma).toFloat();
+    float energyKwh = NAN;
+    unsigned long long ts;
+    if (secondComma < 0) {
+      ts = strtoull(line.substring(firstComma + 1).c_str(), nullptr, 10);
+    } else {
+      String energyField = line.substring(firstComma + 1, secondComma);
+      if (energyField.length() > 0) energyKwh = energyField.toFloat();
+      ts = strtoull(line.substring(secondComma + 1).c_str(), nullptr, 10);
+    }
 
-    if (sendReading(watts, ts)) {
+    SendResult result = sendReading(watts, energyKwh, ts);
+    if (result == SEND_OK) {
       Serial.println("  -> reenviada com sucesso.");
+    } else if (result == SEND_REJECTED) {
+      // Já avisado dentro de sendReading; só não volta pro buffer.
     } else {
       Serial.println("  -> falhou, parando por aqui (mantém o resto pra próxima tentativa).");
       remaining += line + "\n";

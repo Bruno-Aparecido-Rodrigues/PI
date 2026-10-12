@@ -1,15 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
 import { colors } from '../../constants/colors';
-import { GOOGLE_WEB_CLIENT_ID, GOOGLE_ANDROID_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '../../constants/googleAuth';
 import { login, loginWithGoogleIdToken } from '../../services/authIntegration';
+import { signInWithGoogle } from '../../services/googleSignIn';
 import { getUserHubs } from '../../services/hubPairing';
 import { styles } from './style';
-
-WebBrowser.maybeCompleteAuthSession();
 
 interface LoginScreenProps {
   navigation: any;
@@ -22,43 +18,38 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
-
-  // Provedor pronto do Google: em builds nativos (dev client/EAS) ele usa
-  // automaticamente o fluxo de código + PKCE com o Client ID nativo certo
-  // (Android/iOS), sem precisar de client secret nem exchange manual.
-  const [googleRequest, googleResponse, promptGoogleAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
-    iosClientId: GOOGLE_IOS_CLIENT_ID,
-  });
-
-  useEffect(() => {
-    if (googleResponse?.type === 'success') {
-      const idToken = googleResponse.authentication?.idToken;
-      if (idToken) {
-        handleGoogleLogin(idToken);
-      }
-    }
-  }, [googleResponse]);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   async function goToAppOrPairing(uid: string) {
     const hubs = await getUserHubs(uid);
     navigation.replace(hubs.length > 0 ? 'MainTabs' : 'AddDevice');
   }
 
-  async function handleGoogleLogin(idToken: string) {
+  async function handleGoogleLogin() {
     setErrorMessage('');
     setInfoMessage('');
-    setLoading(true);
-    const result = await loginWithGoogleIdToken(idToken);
-    setLoading(false);
+    setGoogleLoading(true);
 
-    if (!result.success) {
-      setErrorMessage(result.message);
-      return;
+    try {
+      // 1) Seletor de contas do Google → idToken
+      const google = await signInWithGoogle();
+      if (google.status === 'cancelled') return;
+      if (google.status === 'error') {
+        setErrorMessage(google.message);
+        return;
+      }
+
+      // 2) idToken → conta no Firebase (cria na primeira vez, entra nas próximas)
+      const result = await loginWithGoogleIdToken(google.idToken);
+      if (!result.success) {
+        setErrorMessage(result.message);
+        return;
+      }
+
+      await goToAppOrPairing(result.user.uid);
+    } finally {
+      setGoogleLoading(false);
     }
-
-    await goToAppOrPairing(result.user.uid);
   }
 
   async function handleLogin() {
@@ -142,7 +133,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
           {infoMessage ? <Text style={styles.infoText}>{infoMessage}</Text> : null}
 
-          <TouchableOpacity style={styles.submitButton} onPress={handleLogin} disabled={loading}>
+          <TouchableOpacity style={styles.submitButton} onPress={handleLogin} disabled={loading || googleLoading}>
             {loading ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
@@ -158,11 +149,17 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
           <TouchableOpacity
             style={styles.googleButton}
-            onPress={() => promptGoogleAsync()}
-            disabled={!googleRequest}
+            onPress={handleGoogleLogin}
+            disabled={loading || googleLoading}
           >
-            <MaterialCommunityIcons name="google" size={18} color="#EA4335" />
-            <Text style={styles.googleButtonText}>Entrar com Google</Text>
+            {googleLoading ? (
+              <ActivityIndicator color={colors.onSurfaceVariant} />
+            ) : (
+              <>
+                <MaterialCommunityIcons name="google" size={18} color="#EA4335" />
+                <Text style={styles.googleButtonText}>Entrar com Google</Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 

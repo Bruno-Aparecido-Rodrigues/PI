@@ -1,21 +1,39 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { getCurrentUser } from '../../services/authIntegration';
-import { pairHub, normalizeHubId } from '../../services/hubPairing';
+import { pairHub, parseHubQrCode } from '../../services/hubPairing';
 import { styles } from './style';
 
 interface AddDeviceScreenProps {
   navigation: any;
+  /** scannedData/scannedAt chegam da tela ScanHub depois de ler um QR Code. */
+  route: { params?: { scannedData?: string; scannedAt?: number } };
 }
 
-export function AddDeviceScreen({ navigation }: AddDeviceScreenProps) {
+/** Mostra o ID no formato de MAC (02:A7:3C:91:5E:48), mais fácil de conferir. */
+function formatAsMac(hubId: string): string {
+  return hubId.match(/.{1,2}/g)?.join(':') ?? hubId;
+}
+
+export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
   const [hubId, setHubId] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  async function handlePair() {
+  // Quando a tela de leitura (ScanHub) volta com um QR lido, processa uma vez
+  // e limpa o parâmetro (pra não reprocessar se a tela renderizar de novo).
+  const scannedAt = route.params?.scannedAt;
+  useEffect(() => {
+    const scannedData = route.params?.scannedData;
+    if (!scannedAt || scannedData === undefined) return;
+    navigation.setParams({ scannedData: undefined, scannedAt: undefined });
+    handleQrScanned(scannedData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scannedAt]);
+
+  async function pair(rawHubId: string) {
     setErrorMessage('');
     const user = getCurrentUser();
 
@@ -24,20 +42,32 @@ export function AddDeviceScreen({ navigation }: AddDeviceScreenProps) {
       return;
     }
 
-    if (!hubId.trim()) {
-      setErrorMessage('Digite o ID do dispositivo (endereço MAC do ESP32).');
+    if (!rawHubId.trim()) {
+      setErrorMessage('Digite o ID do dispositivo (endereço MAC do ESP32) ou escaneie o QR Code.');
       return;
     }
 
     setLoading(true);
     try {
-      await pairHub(user.uid, hubId);
+      await pairHub(user.uid, rawHubId);
       navigation.replace('MainTabs');
     } catch (error: any) {
       setErrorMessage(error?.message ?? 'Não foi possível parear o dispositivo. Tente novamente.');
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleQrScanned(data: string) {
+    const scannedHubId = parseHubQrCode(data);
+    if (!scannedHubId) {
+      setErrorMessage('Esse QR Code não é de um hub A.C.D.C. Use o da etiqueta do dispositivo.');
+      return;
+    }
+
+    // Preenche o campo (pra pessoa ver qual ID foi lido) e já pareia direto.
+    setHubId(formatAsMac(scannedHubId));
+    pair(scannedHubId);
   }
 
   return (
@@ -52,11 +82,29 @@ export function AddDeviceScreen({ navigation }: AddDeviceScreenProps) {
           </View>
           <Text style={styles.title}>Adicionar Dispositivo</Text>
           <Text style={styles.subtitle}>
-            Digite o ID do seu hub (o endereço MAC do ESP32) pra vincular à sua conta.
+            Escaneie o QR Code da etiqueta do hub ou digite o ID dele pra vincular à sua conta.
           </Text>
         </View>
 
         <View style={styles.form}>
+          <TouchableOpacity
+            style={styles.scanButton}
+            onPress={() => {
+              setErrorMessage('');
+              navigation.navigate('ScanHub');
+            }}
+            disabled={loading}
+          >
+            <MaterialIcons name="qr-code-scanner" size={22} color={colors.onPrimary} />
+            <Text style={styles.scanButtonText}>Escanear QR Code</Text>
+          </TouchableOpacity>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>ou digite</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <View style={styles.field}>
             <Text style={styles.label}>ID do Dispositivo</Text>
             <TextInput
@@ -71,7 +119,7 @@ export function AddDeviceScreen({ navigation }: AddDeviceScreenProps) {
 
           {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
 
-          <TouchableOpacity style={styles.submitButton} onPress={handlePair} disabled={loading}>
+          <TouchableOpacity style={styles.submitButton} onPress={() => pair(hubId)} disabled={loading}>
             {loading ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
@@ -82,7 +130,7 @@ export function AddDeviceScreen({ navigation }: AddDeviceScreenProps) {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            O ID fica visível no Serial Monitor do Arduino IDE na primeira vez que o ESP32 liga.
+            O QR Code e o ID ficam na etiqueta do hub. O ID também aparece no Serial Monitor do Arduino IDE quando o ESP32 liga.
           </Text>
         </View>
       </View>

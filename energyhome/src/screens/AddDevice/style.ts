@@ -101,6 +101,20 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.onPrimary,
   },
+  scanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: 16,
+  },
+  scanButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.onPrimary,
+  },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',

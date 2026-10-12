@@ -1,4 +1,4 @@
-import { getDatabase, ref, onValue, set, get } from 'firebase/database';
+import { getDatabase, ref, onValue, set, get, update } from 'firebase/database';
 import { app } from './authIntegration';
 
 const db = getDatabase(app);
@@ -26,12 +26,63 @@ const db = getDatabase(app);
 //       pra Cloud Function saber pra quem notificar um alerta desse hub,
 //       sem precisar varrer todos os usuários procurando.
 //
-// Gravamos os dois de uma vez ao parear, pra manter consistente.
+// Gravamos tudo numa única escrita atômica (update multi-caminho), por dois
+// motivos: (1) nunca fica um estado pela metade (ex: dono gravado mas
+// claimed ainda false); (2) as regras de segurança (database.rules.json)
+// avaliam o resultado final da escrita inteira — só deixam marcar
+// claimed = true se, no mesmo envio, o usuário estiver virando dono.
+//
+// Regra importante: um hub só aceita um dono novo se ainda NÃO tiver
+// nenhum. Se outra conta já pareou, o Firebase recusa (PERMISSION_DENIED).
 // ─────────────────────────────────────────────────────────────────────────
+
+function isPermissionDenied(error: any): boolean {
+  return (
+    error?.code === 'PERMISSION_DENIED' ||
+    String(error?.message ?? '').toUpperCase().includes('PERMISSION_DENIED')
+  );
+}
 
 /** Normaliza um ID de hub digitado pelo usuário (aceita com ou sem ":"). */
 export function normalizeHubId(rawHubId: string): string {
   return rawHubId.trim().toUpperCase().replace(/[^A-F0-9]/g, '');
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// QR Code de pareamento
+//
+// Como o ESP32 não tem tela, o QR fica numa etiqueta colada no hub. O
+// conteúdo é um link no formato:
+//
+//    energyhome://pair?hub=02A73C915E48
+//
+// Usar o "scheme" do app (energyhome://, definido no app.json) em vez do ID
+// puro evita aceitar qualquer QR aleatório como se fosse um hub, e deixa
+// pronto pra, no futuro, a câmera do próprio celular abrir o app direto na
+// tela de pareamento. Por robustez, também aceitamos um QR só com o ID.
+// ─────────────────────────────────────────────────────────────────────────
+
+const HUB_ID_LENGTH = 12; // MAC do ESP32 em hexadecimal, sem ":"
+
+/** Conteúdo que vai no QR Code da etiqueta de um hub. */
+export function buildHubQrContent(hubId: string): string {
+  return `energyhome://pair?hub=${normalizeHubId(hubId)}`;
+}
+
+/** Extrai o hubId de um QR Code lido pela câmera, ou null se não for de um hub. */
+export function parseHubQrCode(data: string): string | null {
+  const text = data.trim();
+
+  const fromLink = text.match(/^energyhome:\/\/pair\?(?:.*&)?hub=([0-9A-Fa-f:\-]+)/);
+  const candidate = fromLink ? fromLink[1] : text;
+
+  // Sem o link, só aceita se o texto inteiro for um MAC (com ou sem ":" / "-").
+  if (!fromLink && !/^[0-9A-Fa-f]{2}([:\-]?[0-9A-Fa-f]{2}){5}$/.test(candidate)) {
+    return null;
+  }
+
+  const hubId = normalizeHubId(candidate);
+  return hubId.length === HUB_ID_LENGTH ? hubId : null;
 }
 
 /** Associa um hubId à conta do usuário logado (pareamento). */
@@ -49,26 +100,49 @@ export async function pairHub(uid: string, rawHubId: string): Promise<void> {
     );
   }
 
-  await Promise.all([
-    set(ref(db, `users/${uid}/hubs/${hubId}`), true),
-    set(ref(db, `hubs/${hubId}/owners/${uid}`), true),
-    set(ref(db, `hubs/${hubId}/claimed`), true),
-  ]);
+  try {
+    await update(ref(db), {
+      [`users/${uid}/hubs/${hubId}`]: true,
+      [`hubs/${hubId}/owners/${uid}`]: true,
+      [`hubs/${hubId}/claimed`]: true,
+    });
+  } catch (error: any) {
+    if (isPermissionDenied(error)) {
+      throw new Error('Esse dispositivo já está pareado com outra conta.');
+    }
+    throw error;
+  }
 }
 
 /** Remove a associação entre um hub e a conta do usuário. */
 export async function unpairHub(uid: string, hubId: string): Promise<void> {
-  await Promise.all([
-    set(ref(db, `users/${uid}/hubs/${hubId}`), null),
-    set(ref(db, `hubs/${hubId}/owners/${uid}`), null),
-  ]);
+  // Lê os donos ANTES de sair: depois de removido, o usuário perde a
+  // permissão de leitura desse hub.
+  let otherOwnersRemain: boolean;
+  try {
+    const ownersSnapshot = await get(ref(db, `hubs/${hubId}/owners`));
+    const owners = ownersSnapshot.val() ?? {};
+    otherOwnersRemain = Object.keys(owners).some((ownerUid) => ownerUid !== uid);
+  } catch (error: any) {
+    if (!isPermissionDenied(error)) throw error;
+    // Estado inconsistente: o hub está na lista do usuário, mas ele não é
+    // mais dono dele. Só limpa a lista do próprio usuário.
+    await set(ref(db, `users/${uid}/hubs/${hubId}`), null);
+    return;
+  }
+
+  const updates: Record<string, boolean | null> = {
+    [`users/${uid}/hubs/${hubId}`]: null,
+    [`hubs/${hubId}/owners/${uid}`]: null,
+  };
 
   // Se ninguém mais é dono desse hub, ele volta pro estado "não reivindicado"
   // o ESP32 vai parar de mandar dados de consumo até ser pareado de novo.
-  const ownersSnapshot = await get(ref(db, `hubs/${hubId}/owners`));
-  if (!ownersSnapshot.exists()) {
-    await set(ref(db, `hubs/${hubId}/claimed`), false);
+  if (!otherOwnersRemain) {
+    updates[`hubs/${hubId}/claimed`] = false;
   }
+
+  await update(ref(db), updates);
 }
 
 /** Lê, uma vez, os hubs pareados com essa conta. */

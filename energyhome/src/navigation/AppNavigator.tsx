@@ -7,6 +7,7 @@ import { LoginScreen } from '../screens/Login';
 import { RegisterScreen } from '../screens/Register';
 import { ForgotPasswordScreen } from '../screens/ForgotPassword';
 import { AddDeviceScreen } from '../screens/AddDevice';
+import { ScanHubScreen } from '../screens/ScanHub';
 import { DashboardScreen } from '../screens/Dashboard';
 import { ChartsScreen } from '../screens/Charts';
 import { AlertsScreen } from '../screens/Alerts';
@@ -38,6 +39,11 @@ export function AppNavigator() {
         <RootStack.Screen name="Register" component={RegisterScreen} />
         <RootStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <RootStack.Screen name="AddDevice" component={AddDeviceScreen} />
+        <RootStack.Screen
+          name="ScanHub"
+          component={ScanHubScreen}
+          options={{ animation: 'slide_from_bottom' }}
+        />
         <RootStack.Screen name="MainTabs" component={MainTabs} />
       </RootStack.Navigator>
     </NavigationContainer>

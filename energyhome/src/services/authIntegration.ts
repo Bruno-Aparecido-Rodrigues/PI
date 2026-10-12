@@ -17,6 +17,7 @@ import {
 } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { firebaseConfig } from './firebaseConfig';
+import { signOutFromGoogle } from './googleSignIn';
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
@@ -43,6 +44,10 @@ function mapAuthError(code: string): string {
       return 'Já existe uma conta com esse e-mail.';
     case 'auth/weak-password':
       return 'A senha precisa ter pelo menos 6 caracteres.';
+    case 'auth/account-exists-with-different-credential':
+      return 'Já existe uma conta com esse e-mail. Entre com e-mail e senha.';
+    case 'auth/network-request-failed':
+      return 'Sem conexão com a internet. Tente novamente.';
     default:
       return 'Não foi possível concluir a operação. Tente novamente.';
   }
@@ -97,6 +102,9 @@ export async function loginWithGoogleIdToken(idToken: string): Promise<AuthResul
 
 export async function logout(): Promise<void> {
   await firebaseSignOut(auth);
+  // Se entrou com Google, encerra também a sessão do Google neste app, pra
+  // próxima pessoa poder escolher outra conta.
+  await signOutFromGoogle();
 }
 
 export function subscribeToAuthChanges(callback: (user: User | null) => void) {
@@ -124,6 +132,7 @@ export async function deleteAccount(): Promise<AuthResult> {
 
   try {
     await deleteUser(user);
+    await signOutFromGoogle();
     return { success: true, user };
   } catch (error: any) {
     if (error?.code === 'auth/requires-recent-login') {

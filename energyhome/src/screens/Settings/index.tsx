@@ -37,9 +37,14 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
       return;
     }
     setSavingTariff(true);
-    await saveTariff(hubId, parsed);
-    setSavingTariff(false);
-    setTariffFeedback('Tarifa registrada.');
+    try {
+      await saveTariff(hubId, parsed);
+      setTariffFeedback('Tarifa registrada.');
+    } catch {
+      setTariffFeedback('Não foi possível salvar a tarifa. Tente novamente.');
+    } finally {
+      setSavingTariff(false);
+    }
   }
 
   async function handleLogout() {
@@ -58,9 +63,14 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
     const user = getCurrentUser();
     if (!user) return;
 
-    await unpairHub(user.uid, hubId);
-    setConfirmingDisconnect(false);
-    setFeedback('Dispositivo desconectado.');
+    try {
+      await unpairHub(user.uid, hubId);
+      setFeedback('Dispositivo desconectado.');
+    } catch {
+      setFeedback('Não foi possível desconectar o dispositivo. Tente novamente.');
+    } finally {
+      setConfirmingDisconnect(false);
+    }
   }
 
   async function handleDeleteAccount() {

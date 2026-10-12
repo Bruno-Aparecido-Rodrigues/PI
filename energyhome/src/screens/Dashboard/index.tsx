@@ -16,7 +16,18 @@ interface DashboardScreenProps {
 
 export function DashboardScreen({ navigation }: DashboardScreenProps) {
   const { hubId, loading: hubLoading } = useCurrentHub();
-  const { currentWatts, wattsHistory, todayKwh, monthKwh, estimatedBill, tariff, peakWatts } = useEnergyData(hubId);
+  const {
+    currentWatts,
+    wattsHistory,
+    todayKwh,
+    monthKwh,
+    estimatedBill,
+    projectedBill,
+    tariff,
+    peakWatts,
+    trend,
+    trendLabel,
+  } = useEnergyData(hubId);
 
   if (!hubLoading && !hubId) {
     return (
@@ -37,8 +48,11 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
   }
 
   const hasCurrentReading = currentWatts !== null;
-  const projectedBill = estimatedBill * 1.3; // estimativa simples até o fim do mês
-  const progressPercent = projectedBill > 0 ? Math.min(100, (estimatedBill / projectedBill) * 100) : 0;
+  // Barra de progresso: quanto da conta projetada do mês já foi consumido.
+  const progressPercent =
+    projectedBill !== null && projectedBill > 0 ? Math.min(100, (estimatedBill / projectedBill) * 100) : 0;
+  const projectedValue =
+    projectedBill !== null ? `R$ ${projectedBill.toFixed(2).replace('.', ',')}` : 'após 24h de medição';
 
   return (
     <View style={styles.screen}>
@@ -53,14 +67,14 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
 
         <PowerUsageCard
           watts={hasCurrentReading ? Math.round(currentWatts!) : 0}
-          comparisonLabel={hasCurrentReading ? 'Leitura em tempo real do Hub' : 'Aguardando leitura do Hub…'}
-          trendDown
+          comparisonLabel={trendLabel}
+          trend={trend}
           history={wattsHistory}
         />
 
         <BillEstimateCard
           currentValue={estimatedBill.toFixed(2).replace('.', ',')}
-          projectedValue={`R$ ${projectedBill.toFixed(2).replace('.', ',')}`}
+          projectedValue={projectedValue}
           billingCycleLabel={`Tarifa atual: R$ ${tariff.toFixed(2).replace('.', ',')}/kWh`}
           progressPercent={progressPercent}
           onViewForecast={() => navigation.navigate('Charts')}

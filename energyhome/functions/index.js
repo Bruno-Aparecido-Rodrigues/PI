@@ -1,4 +1,6 @@
 const { onValueCreated } = require('firebase-functions/v2/database');
+// Gatilho de "usuário excluído" do Firebase Auth só existe na API v1.
+const functionsV1 = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 const fetch = require('node-fetch');
 
@@ -77,4 +79,45 @@ exports.onNewAlert = onValueCreated('/hubs/{hubId}/alerts/{alertId}', async (eve
 
   const result = await response.json();
   console.log('Resposta do serviço de push do Expo:', JSON.stringify(result));
+});
+
+// Dispara quando uma conta é excluída no Firebase Auth (botão "Excluir Conta"
+// em Ajustes, ou pelo console). Faz a limpeza que o app não consegue fazer
+// sozinho depois que o usuário já não existe mais:
+//  - remove a conta da lista de donos de cada hub dela;
+//  - se ela era a ÚLTIMA dona, apaga o histórico do hub (leituras, alertas,
+//    tarifa, leitura atual), como a tela de Ajustes promete, e marca o hub
+//    como não pareado (claimed = false) pra ele poder ser pareado de novo;
+//  - apaga /users/{uid} e /pushTokens/{uid}.
+// Sem isso, como as regras só aceitam um dono novo quando o hub não tem
+// nenhum, um hub de uma conta excluída ficaria preso pra sempre.
+exports.onUserDeleted = functionsV1.auth.user().onDelete(async (user) => {
+  const uid = user.uid;
+  const db = admin.database();
+
+  const hubsSnapshot = await db.ref(`users/${uid}/hubs`).once('value');
+  const hubIds = Object.keys(hubsSnapshot.val() ?? {});
+
+  for (const hubId of hubIds) {
+    const ownersSnapshot = await db.ref(`hubs/${hubId}/owners`).once('value');
+    const owners = ownersSnapshot.val() ?? {};
+    const otherOwnersRemain = Object.keys(owners).some((ownerUid) => ownerUid !== uid);
+
+    const updates = { [`hubs/${hubId}/owners/${uid}`]: null };
+    if (!otherOwnersRemain) {
+      updates[`hubs/${hubId}/claimed`] = false;
+      updates[`hubs/${hubId}/readings`] = null;
+      updates[`hubs/${hubId}/alerts`] = null;
+      updates[`hubs/${hubId}/settings`] = null;
+      updates[`hubs/${hubId}/current`] = null;
+    }
+    await db.ref().update(updates);
+  }
+
+  await db.ref().update({
+    [`users/${uid}`]: null,
+    [`pushTokens/${uid}`]: null,
+  });
+
+  console.log(`Conta ${uid} excluída: limpeza feita em ${hubIds.length} hub(s).`);
 });
