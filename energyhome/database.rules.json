@@ -1,57 +1,85 @@
 {
   "rules": {
     "hubs": {
+      ".indexOn": [
+        "unclaimedAt"
+      ],
       "$hubId": {
         ".read": "auth != null && data.child('owners').child(auth.uid).exists()",
-
         "registered": {
           ".read": true,
           ".write": "newData.exists()",
           ".validate": "newData.isNumber()"
         },
-
         "claimed": {
           ".read": true,
           ".write": "auth != null && (data.parent().child('owners').child(auth.uid).exists() || newData.parent().child('owners').child(auth.uid).exists())",
           ".validate": "newData.isBoolean() && newData.val() == newData.parent().child('owners').hasChildren()"
         },
-
-        "current": {
-          ".write": "newData.exists()",
-          ".validate": "newData.hasChildren(['watts', 'updatedAt'])",
-          "watts": { ".validate": "newData.isNumber()" },
-          "updatedAt": { ".validate": "newData.isNumber()" },
-          "$other": { ".validate": false }
+        "unclaimedAt": {
+          ".read": true,
+          ".write": "auth != null && (data.parent().child('owners').child(auth.uid).exists() || newData.parent().child('owners').child(auth.uid).exists())",
+          ".validate": "newData.isNumber() && newData.val() == now"
         },
-
+        "current": {
+          ".write": "newData.exists() || (auth != null && newData.parent().child('owners').child(auth.uid).exists() && data.parent().child('unclaimedAt').isNumber() && data.parent().child('unclaimedAt').val() < now - 15552000000)",
+          ".validate": "newData.hasChildren(['watts', 'updatedAt'])",
+          "watts": {
+            ".validate": "newData.isNumber()"
+          },
+          "updatedAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
         "readings": {
+          ".write": "!newData.exists() && auth != null && newData.parent().child('owners').child(auth.uid).exists() && data.parent().child('unclaimedAt').isNumber() && data.parent().child('unclaimedAt').val() < now - 15552000000",
           ".indexOn": "timestamp",
           "$readingId": {
             ".write": "!data.exists() && newData.exists()",
             ".validate": "newData.hasChildren(['watts', 'timestamp'])",
-            "watts": { ".validate": "newData.isNumber()" },
-            "timestamp": { ".validate": "newData.isNumber()" },
-            "$other": { ".validate": false }
+            "watts": {
+              ".validate": "newData.isNumber()"
+            },
+            "energyKwh": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "timestamp": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
-
         "alerts": {
+          ".write": "!newData.exists() && auth != null && newData.parent().child('owners').child(auth.uid).exists() && data.parent().child('unclaimedAt').isNumber() && data.parent().child('unclaimedAt').val() < now - 15552000000",
           ".indexOn": "timestamp",
           "$alertId": {
             ".write": "auth != null && root.child('hubs').child($hubId).child('owners').child(auth.uid).exists()",
             ".validate": "newData.hasChildren(['templateId', 'timestamp', 'read'])",
-            "templateId": { ".validate": "newData.isString() && newData.val().length <= 40" },
-            "timestamp": { ".validate": "newData.isNumber()" },
-            "read": { ".validate": "newData.isBoolean()" },
-            "$other": { ".validate": false }
+            "templateId": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "timestamp": {
+              ".validate": "newData.isNumber()"
+            },
+            "read": {
+              ".validate": "newData.isBoolean()"
+            },
+            "$other": {
+              ".validate": false
+            }
           }
         },
-
         "settings": {
-          ".write": "auth != null && root.child('hubs').child($hubId).child('owners').child(auth.uid).exists()",
-          "tariff": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100" }
+          ".write": "auth != null && root.child('hubs').child($hubId).child('owners').child(auth.uid).exists() || (!newData.exists() && auth != null && newData.parent().child('owners').child(auth.uid).exists() && data.parent().child('unclaimedAt').isNumber() && data.parent().child('unclaimedAt').val() < now - 15552000000)",
+          "tariff": {
+            ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100"
+          }
         },
-
         "owners": {
           "$uid": {
             ".write": "auth != null && auth.uid === $uid && (data.exists() || (!data.parent().exists() && root.child('hubs').child($hubId).child('registered').exists()))",
@@ -60,14 +88,12 @@
         }
       }
     },
-
     "users": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid"
       }
     },
-
     "pushTokens": {
       "$uid": {
         ".read": false,

@@ -48,8 +48,8 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
   }
 
   async function handleLogout() {
+    // Ao sair, o AppNavigator volta sozinho pra tela de Login.
     await logout();
-    navigation.replace('Login');
   }
 
   async function handleDisconnect() {
@@ -65,7 +65,9 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
 
     try {
       await unpairHub(user.uid, hubId);
-      setFeedback('Dispositivo desconectado.');
+      setFeedback(
+        'Dispositivo desconectado. O histórico fica guardado por 6 meses: se o hub for pareado de novo nesse prazo, os dados continuam; depois disso, são apagados.'
+      );
     } catch {
       setFeedback('Não foi possível desconectar o dispositivo. Tente novamente.');
     } finally {
@@ -85,10 +87,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
     if (!result.success) {
       setDeleteError(result.message);
       setConfirmingDelete(false);
-      return;
     }
-
-    navigation.replace('Login');
   }
 
   return (

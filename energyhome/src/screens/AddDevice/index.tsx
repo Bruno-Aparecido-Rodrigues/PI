@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
-import { getCurrentUser } from '../../services/authIntegration';
+import { getCurrentUser, logout } from '../../services/authIntegration';
 import { pairHub, parseHubQrCode } from '../../services/hubPairing';
 import { styles } from './style';
 
@@ -132,6 +132,19 @@ export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
           <Text style={styles.footerText}>
             O QR Code e o ID ficam na etiqueta do hub. O ID também aparece no Serial Monitor do Arduino IDE quando o ESP32 liga.
           </Text>
+        </View>
+
+        {/* Esta tela pode ser a primeira do app (conta ainda sem hub), ou ela pular pro Dashboard ou sair da conta. */}
+        <View style={styles.labelRow}>
+          <TouchableOpacity
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.replace('MainTabs'))}
+            disabled={loading}
+          >
+            <Text style={styles.link}>{navigation.canGoBack() ? 'Voltar' : 'Pular por enquanto'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => logout()} disabled={loading}>
+            <Text style={styles.link}>Sair da conta</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </KeyboardAvoidingView>

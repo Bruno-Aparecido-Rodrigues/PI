@@ -4,7 +4,6 @@ import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { login, loginWithGoogleIdToken } from '../../services/authIntegration';
 import { signInWithGoogle } from '../../services/googleSignIn';
-import { getUserHubs } from '../../services/hubPairing';
 import { styles } from './style';
 
 interface LoginScreenProps {
@@ -20,10 +19,6 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   const [infoMessage, setInfoMessage] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  async function goToAppOrPairing(uid: string) {
-    const hubs = await getUserHubs(uid);
-    navigation.replace(hubs.length > 0 ? 'MainTabs' : 'AddDevice');
-  }
 
   async function handleGoogleLogin() {
     setErrorMessage('');
@@ -43,10 +38,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
       const result = await loginWithGoogleIdToken(google.idToken);
       if (!result.success) {
         setErrorMessage(result.message);
-        return;
       }
-
-      await goToAppOrPairing(result.user.uid);
     } finally {
       setGoogleLoading(false);
     }
@@ -67,10 +59,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
     if (!result.success) {
       setErrorMessage(result.message);
-      return;
     }
-
-    await goToAppOrPairing(result.user.uid);
   }
 
   return (

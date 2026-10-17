@@ -1,4 +1,4 @@
-import { getDatabase, ref, onValue, set, get, update } from 'firebase/database';
+import { getDatabase, ref, onValue, set, get, update, serverTimestamp } from 'firebase/database';
 import { app } from './authIntegration';
 
 const db = getDatabase(app);
@@ -85,6 +85,23 @@ export function parseHubQrCode(data: string): string | null {
   return hubId.length === HUB_ID_LENGTH ? hubId : null;
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Histórico de um hub sem dono
+//
+// Quando o ÚLTIMO dono desconecta o hub, gravamos /hubs/{hubId}/unclaimedAt
+// (horário do servidor). O histórico (leituras, alertas, tarifa, leitura
+// atual) fica guardado:
+//  - se alguém parear de novo em até 6 meses, os dados continuam;
+//  - se passar de 6 meses, o histórico é apagado no momento do novo
+//    pareamento (e, a Cloud Function
+//    limparHubsAbandonados apaga sozinha mesmo sem ninguém parear).
+// Quem garante o prazo são as regras do banco (database.rules.json), usando
+// o relógio do servidor: ninguém consegue apagar antes dos 6 meses.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** 6 meses (180 dias), em ms. Tem que bater com o valor em database.rules.json. */
+export const PRAZO_HISTORICO_MS = 180 * 24 * 60 * 60 * 1000;
+
 /** Associa um hubId à conta do usuário logado (pareamento). */
 export async function pairHub(uid: string, rawHubId: string): Promise<void> {
   const hubId = normalizeHubId(rawHubId);
@@ -100,17 +117,42 @@ export async function pairHub(uid: string, rawHubId: string): Promise<void> {
     );
   }
 
+  // O hub ficou sem dono por mais de 6 meses? Então o histórico antigo é
+  // apagado junto com o pareamento (mesma escrita).
+  const unclaimedSnapshot = await get(ref(db, `hubs/${hubId}/unclaimedAt`));
+  const unclaimedAt = unclaimedSnapshot.val();
+  const historicoExpirado =
+    typeof unclaimedAt === 'number' && Date.now() - unclaimedAt > PRAZO_HISTORICO_MS;
+
+  const pareamento: Record<string, unknown> = {
+    [`users/${uid}/hubs/${hubId}`]: true,
+    [`hubs/${hubId}/owners/${uid}`]: true,
+    [`hubs/${hubId}/claimed`]: true,
+    [`hubs/${hubId}/unclaimedAt`]: null,
+  };
+  const limpeza: Record<string, unknown> = {
+    [`hubs/${hubId}/readings`]: null,
+    [`hubs/${hubId}/alerts`]: null,
+    [`hubs/${hubId}/settings`]: null,
+    [`hubs/${hubId}/current`]: null,
+  };
+
   try {
-    await update(ref(db), {
-      [`users/${uid}/hubs/${hubId}`]: true,
-      [`hubs/${hubId}/owners/${uid}`]: true,
-      [`hubs/${hubId}/claimed`]: true,
-    });
+    await update(ref(db), historicoExpirado ? { ...pareamento, ...limpeza } : pareamento);
   } catch (error: any) {
-    if (isPermissionDenied(error)) {
-      throw new Error('Esse dispositivo já está pareado com outra conta.');
+    if (!isPermissionDenied(error)) throw error;
+
+    // Se o relógio do celular estiver adiantado, o app pode achar que já
+    // passou 6 meses quando o servidor ainda não acha: tenta parear sem apagar.
+    if (historicoExpirado) {
+      try {
+        await update(ref(db), pareamento);
+        return;
+      } catch (segundoErro: any) {
+        if (!isPermissionDenied(segundoErro)) throw segundoErro;
+      }
     }
-    throw error;
+    throw new Error('Esse dispositivo já está pareado com outra conta.');
   }
 }
 
@@ -131,15 +173,17 @@ export async function unpairHub(uid: string, hubId: string): Promise<void> {
     return;
   }
 
-  const updates: Record<string, boolean | null> = {
+  const updates: Record<string, unknown> = {
     [`users/${uid}/hubs/${hubId}`]: null,
     [`hubs/${hubId}/owners/${uid}`]: null,
   };
 
   // Se ninguém mais é dono desse hub, ele volta pro estado "não reivindicado"
   // o ESP32 vai parar de mandar dados de consumo até ser pareado de novo.
+  // E começa a contar o prazo de 6 meses do histórico (ver PRAZO_HISTORICO_MS).
   if (!otherOwnersRemain) {
     updates[`hubs/${hubId}/claimed`] = false;
+    updates[`hubs/${hubId}/unclaimedAt`] = serverTimestamp();
   }
 
   await update(ref(db), updates);

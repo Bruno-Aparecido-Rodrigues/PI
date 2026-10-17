@@ -1,6 +1,9 @@
 const { onValueCreated } = require('firebase-functions/v2/database');
 // Gatilho de "usuário excluído" do Firebase Auth só existe na API v1.
 const functionsV1 = require('firebase-functions/v1');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+
+const PRAZO_HISTORICO_MS = 180 * 24 * 60 * 60 * 1000;
 const admin = require('firebase-admin');
 const fetch = require('node-fetch');
 
@@ -121,3 +124,33 @@ exports.onUserDeleted = functionsV1.auth.user().onDelete(async (user) => {
 
   console.log(`Conta ${uid} excluída: limpeza feita em ${hubIds.length} hub(s).`);
 });
+
+// Roda todo dia às 3h (horário de Brasília). Apaga o histórico (leituras,
+// alertas, tarifa, leitura atual) dos hubs que estão SEM DONO há mais de 6
+// meses — o app já faz isso quando alguém pareia um hub assim, mas sem esta
+// função os dados ficariam guardados pra sempre se ninguém parear de novo.
+// /hubs/{hubId}/unclaimedAt é gravado pelo app quando o último dono desconecta.
+exports.limparHubsAbandonados = onSchedule(
+  { schedule: 'every day 03:00', timeZone: 'America/Sao_Paulo' },
+  async () => {
+    const db = admin.database();
+    const limite = Date.now() - PRAZO_HISTORICO_MS;
+    const snapshot = await db.ref('hubs').orderByChild('unclaimedAt').startAt(1).endAt(limite).once('value');
+
+    const updates = {};
+    let quantidade = 0;
+    snapshot.forEach((hub) => {
+      if (hub.child('owners').exists()) return; // alguém pareou: não mexe
+      const id = hub.key;
+      updates[`hubs/${id}/readings`] = null;
+      updates[`hubs/${id}/alerts`] = null;
+      updates[`hubs/${id}/settings`] = null;
+      updates[`hubs/${id}/current`] = null;
+      updates[`hubs/${id}/unclaimedAt`] = null;
+      quantidade++;
+    });
+
+    if (quantidade > 0) await db.ref().update(updates);
+    console.log(`limparHubsAbandonados: histórico apagado de ${quantidade} hub(s).`);
+  }
+);
