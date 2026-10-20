@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Switch, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
 import { logout, deleteAccount, getCurrentUser } from '../../services/authIntegration';
-import { getTariff, setTariff as saveTariff } from '../../services/energyData';
+import { TarifaCard } from '../../components/TarifaCard';
 import { unpairHub } from '../../services/hubPairing';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { styles } from './style';
@@ -15,37 +15,10 @@ interface SettingsScreenProps {
 
 export function SettingsScreen({ navigation }: SettingsScreenProps) {
   const { hubId, loading: hubLoading } = useCurrentHub();
-  const [tariff, setTariff] = useState('0.85');
-  const [savingTariff, setSavingTariff] = useState(false);
-  const [offPeakDiscount, setOffPeakDiscount] = useState(true);
   const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [feedback, setFeedback] = useState('');
-  const [tariffFeedback, setTariffFeedback] = useState('');
   const [deleteError, setDeleteError] = useState('');
-
-  useEffect(() => {
-    if (!hubId) return;
-    getTariff(hubId).then((value) => setTariff(String(value)));
-  }, [hubId]);
-
-  async function handleSaveTariff() {
-    if (!hubId) return;
-    const parsed = Number(tariff.replace(',', '.'));
-    if (Number.isNaN(parsed) || parsed <= 0) {
-      setTariffFeedback('Digite um valor de tarifa válido.');
-      return;
-    }
-    setSavingTariff(true);
-    try {
-      await saveTariff(hubId, parsed);
-      setTariffFeedback('Tarifa registrada.');
-    } catch {
-      setTariffFeedback('Não foi possível salvar a tarifa. Tente novamente.');
-    } finally {
-      setSavingTariff(false);
-    }
-  }
 
   async function handleLogout() {
     // Ao sair, o AppNavigator volta sozinho pra tela de Login.
@@ -88,6 +61,7 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
       setDeleteError(result.message);
       setConfirmingDelete(false);
     }
+    // Se deu certo, a conta deixa de existir e o AppNavigator volta pro Login.
   }
 
   return (
@@ -99,48 +73,8 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
 
         {feedback ? <Text style={styles.feedbackText}>{feedback}</Text> : null}
 
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <MaterialIcons name="payments" size={20} color={colors.primary} />
-            <Text style={styles.cardTitle}>Preferências Financeiras</Text>
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Tarifa de Energia (R$/kWh)</Text>
-            <View style={styles.tariffInputWrapper}>
-              <Text style={styles.currencyPrefix}>R$</Text>
-              <TextInput
-                style={styles.tariffInput}
-                keyboardType="decimal-pad"
-                value={tariff}
-                onChangeText={setTariff}
-                editable={!!hubId}
-              />
-            </View>
-            <TouchableOpacity
-              style={styles.saveTariffButton}
-              onPress={handleSaveTariff}
-              disabled={savingTariff || !hubId}
-            >
-              {savingTariff ? (
-                <ActivityIndicator size="small" color={colors.onPrimary} />
-              ) : (
-                <Text style={styles.saveTariffButtonText}>Salvar Tarifa</Text>
-              )}
-            </TouchableOpacity>
-            {tariffFeedback ? <Text style={styles.feedbackText}>{tariffFeedback}</Text> : null}
-            <Text style={styles.fieldHint}>Usado para calcular a economia mensal.</Text>
-          </View>
-
-          <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>Desconto de Horário Fora de Pico</Text>
-            <Switch
-              value={offPeakDiscount}
-              onValueChange={setOffPeakDiscount}
-              trackColor={{ false: colors.outlineVariant, true: colors.primary }}
-            />
-          </View>
-        </View>
+        {/* Tarifa manual ou automática (ANEEL), impostos e iluminação pública */}
+        <TarifaCard hubId={hubId} />
 
         <View style={styles.card}>
           <View style={styles.deviceHeaderRow}>

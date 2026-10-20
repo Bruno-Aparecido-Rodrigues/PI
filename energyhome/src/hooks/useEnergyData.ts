@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   subscribeToCurrentPower,
   subscribeToReadingsSince,
@@ -8,9 +8,15 @@ import {
   startOfMonthMs,
   startOfDaysAgoMs,
   startOfNextMonthMs,
-  getTariff,
   PowerReading,
 } from '../services/energyData';
+import {
+  ConfigTarifa,
+  TARIFA_PADRAO,
+  subscribeToConfigTarifa,
+  dadosAneelVencidos,
+  atualizarTarifaAneel,
+} from '../services/tarifa';
 
 // Quantas leituras de /current manter em memória pra desenhar a curva "ao
 // vivo" do Dashboard. O firmware manda /current a cada ~3s, então 30
@@ -37,7 +43,8 @@ export function useEnergyData(hubId: string | null) {
   const [currentWatts, setCurrentWatts] = useState<number | null>(null);
   const [wattsHistory, setWattsHistory] = useState<number[]>([]);
   const [readings, setReadings] = useState<PowerReading[]>([]);
-  const [tariff, setTariffState] = useState(0.85);
+  const [configTarifa, setConfigTarifa] = useState<ConfigTarifa | null>(null);
+  const atualizandoAneel = useRef(false);
 
   useEffect(() => {
     if (!hubId) {
@@ -68,13 +75,33 @@ export function useEnergyData(hubId: string | null) {
 
     const unsubscribeCurrent = subscribeToCurrentPower(hubId, handleCurrentPower);
     const unsubscribeReadings = subscribeToReadingsSince(hubId, since, setReadings);
-    getTariff(hubId).then(setTariffState);
+    // Tarifa, impostos e iluminação pública (atualiza na hora se mudar em Ajustes)
+    const unsubscribeTarifa = subscribeToConfigTarifa(hubId, setConfigTarifa);
 
     return () => {
       unsubscribeCurrent();
       unsubscribeReadings();
+      unsubscribeTarifa();
     };
   }, [hubId]);
+
+  // Modo automático: se os dados da ANEEL tiverem mais de 1 dia (ou a
+  // bandeira for de outro mês), busca de novo em segundo plano. Se a ANEEL
+  // estiver fora do ar, segue com os últimos valores salvos.
+  useEffect(() => {
+    if (!hubId || !configTarifa || atualizandoAneel.current) return;
+    if (!dadosAneelVencidos(configTarifa)) return;
+    atualizandoAneel.current = true;
+    atualizarTarifaAneel(hubId, configTarifa)
+      .catch((erro) => console.warn('Não foi possível atualizar a tarifa da ANEEL:', erro))
+      .finally(() => {
+        atualizandoAneel.current = false;
+      });
+  }, [hubId, configTarifa]);
+
+  const tariff = configTarifa?.tariff ?? TARIFA_PADRAO;
+  // Iluminação pública (CIP): valor fixo por mês, entra uma vez na conta
+  const cip = configTarifa?.cip ?? 0;
 
   // Recalcula só quando chega leitura nova de histórico (~1x por minuto),
   // não a cada atualização do /current (~3s).
@@ -118,8 +145,8 @@ export function useEnergyData(hubId: string | null) {
 
   const { trend, trendLabel } = describeTrend(currentWatts, typicalWattsNow);
 
-  const estimatedBill = energy.monthKwh * tariff;
-  const projectedBill = energy.projectedMonthKwh !== null ? energy.projectedMonthKwh * tariff : null;
+  const estimatedBill = energy.monthKwh * tariff + cip;
+  const projectedBill = energy.projectedMonthKwh !== null ? energy.projectedMonthKwh * tariff + cip : null;
 
   return {
     currentWatts,
@@ -129,6 +156,8 @@ export function useEnergyData(hubId: string | null) {
     estimatedBill,
     projectedBill,
     tariff,
+    cip,
+    bandeira: configTarifa?.modo === 'aneel' ? configTarifa.aneel?.bandeira ?? null : null,
     peakWatts: energy.peakWatts,
     trend,
     trendLabel,

@@ -41,62 +41,6 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.onSurface,
   },
-  field: {
-    gap: 8,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    color: colors.onSurfaceVariant,
-  },
-  tariffInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-  },
-  currencyPrefix: {
-    fontSize: 15,
-    color: colors.onSurfaceVariant,
-    marginRight: 6,
-  },
-  tariffInput: {
-    flex: 1,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: colors.onSurface,
-  },
-  fieldHint: {
-    fontSize: 12,
-    color: colors.onSurfaceVariant,
-    fontStyle: 'italic',
-  },
-  saveTariffButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  saveTariffButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.onPrimary,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: `${colors.outlineVariant}4D`,
-  },
-  switchLabel: {
-    fontSize: 15,
-    color: colors.onSurface,
-  },
   deviceHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',

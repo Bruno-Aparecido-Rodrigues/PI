@@ -24,6 +24,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
     estimatedBill,
     projectedBill,
     tariff,
+    bandeira,
     peakWatts,
     trend,
     trendLabel,
@@ -75,7 +76,10 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
         <BillEstimateCard
           currentValue={estimatedBill.toFixed(2).replace('.', ',')}
           projectedValue={projectedValue}
-          billingCycleLabel={`Tarifa atual: R$ ${tariff.toFixed(2).replace('.', ',')}/kWh`}
+          billingCycleLabel={
+            `Tarifa: R$ ${tariff.toFixed(2).replace('.', ',')}/kWh` +
+            (bandeira ? ` · ${bandeira.replace(/^bandeira\s+/i, 'Bandeira ')}` : '')
+          }
           progressPercent={progressPercent}
           onViewForecast={() => navigation.navigate('Charts')}
         />

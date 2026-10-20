@@ -78,6 +78,30 @@
           ".write": "auth != null && root.child('hubs').child($hubId).child('owners').child(auth.uid).exists() || (!newData.exists() && auth != null && newData.parent().child('owners').child(auth.uid).exists() && data.parent().child('unclaimedAt').isNumber() && data.parent().child('unclaimedAt').val() < now - 15552000000)",
           "tariff": {
             ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100"
+          },
+          "tarifaModo": {
+            ".validate": "newData.val() === 'manual' || newData.val() === 'aneel'"
+          },
+          "distribuidora": {
+            ".validate": "newData.isString() && newData.val().length <= 60"
+          },
+          "icms": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 60"
+          },
+          "pisCofins": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 60"
+          },
+          "cip": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+          },
+          "aneel": {
+            ".validate": "newData.hasChildren(['tarifaKwh', 'atualizadoEm'])",
+            "tarifaKwh": {
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100"
+            },
+            "atualizadoEm": {
+              ".validate": "newData.isNumber()"
+            }
           }
         },
         "owners": {
