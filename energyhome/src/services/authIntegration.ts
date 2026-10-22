@@ -18,6 +18,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { firebaseConfig } from './firebaseConfig';
 import { signOutFromGoogle } from './googleSignIn';
+import { esquecerTokenPush, registerForPushNotifications } from './pushNotifications';
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
@@ -101,6 +102,10 @@ export async function loginWithGoogleIdToken(idToken: string): Promise<AuthResul
 }
 
 export async function logout(): Promise<void> {
+  // Antes de sair (depois não tem mais permissão): este celular para de
+  // receber os alertas da conta.
+  const uid = auth.currentUser?.uid;
+  if (uid) await esquecerTokenPush(uid);
   await firebaseSignOut(auth);
   // Se entrou com Google, encerra também a sessão do Google neste app, pra
   // próxima pessoa poder escolher outra conta.
@@ -131,10 +136,13 @@ export async function deleteAccount(): Promise<AuthResult> {
   }
 
   try {
+    await esquecerTokenPush(user.uid);
     await deleteUser(user);
     await signOutFromGoogle();
     return { success: true, user };
   } catch (error: any) {
+    // Não excluiu: volta a receber notificações neste celular
+    registerForPushNotifications(user.uid);
     if (error?.code === 'auth/requires-recent-login') {
       return {
         success: false,

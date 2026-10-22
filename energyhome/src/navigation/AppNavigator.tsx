@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { User } from 'firebase/auth';
@@ -17,6 +17,7 @@ import { SettingsScreen } from '../screens/Settings';
 import { BottomNav } from '../components/BottomNav';
 import { subscribeToAuthChanges } from '../services/authIntegration';
 import { getUserHubs } from '../services/hubPairing';
+import { aoTocarNotificacao } from '../services/pushNotifications';
 import { colors } from '../constants/colors';
 
 const RootStack = createNativeStackNavigator();
@@ -35,6 +36,23 @@ function MainTabs() {
     </Tab.Navigator>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Checagem de login ("auth gate")
+//
+// O app tem dois conjuntos de telas e mostra só um deles por vez:
+//  - sem sessão: Login, Cadastro, Esqueci a senha;
+//  - com sessão: as abas do app, Adicionar Dispositivo e o leitor de QR.
+// Quando a pessoa entra ou sai da conta, o Firebase avisa
+// (subscribeToAuthChanges) e o app troca de conjunto sozinho — as telas não
+// precisam navegar pra "Login" ou "MainTabs" manualmente.
+//
+// Só conta como logado quem tem o e-mail verificado: o login com e-mail e
+// senha entra na conta e sai na hora se o e-mail não foi confirmado (e o
+// cadastro também entra rapidinho pra mandar o e-mail de confirmação). Sem
+// esse filtro, a tela piscaria pro app e voltaria pro Login, perdendo a
+// mensagem de erro. Contas do Google já vêm com o e-mail verificado.
+// ─────────────────────────────────────────────────────────────────────────
 
 type AuthState =
   | { status: 'carregando' }
@@ -76,6 +94,26 @@ function useAuthState(): AuthState {
 
 export function AppNavigator() {
   const auth = useAuthState();
+  const navigationRef = useNavigationContainerRef<any>();
+  const [navegacaoPronta, setNavegacaoPronta] = useState(false);
+  const logado = auth.status === 'logado';
+
+  // A tela de carregamento desmonta a navegação; o onReady avisa de novo
+  useEffect(() => {
+    if (auth.status === 'carregando') setNavegacaoPronta(false);
+  }, [auth.status]);
+
+  // Tocar numa notificação de alerta abre a aba Alertas (também quando a
+  // notificação é que abriu o app). Só com a conta logada e a navegação
+  // montada.
+  useEffect(() => {
+    if (!logado || !navegacaoPronta) return;
+    return aoTocarNotificacao(() => {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('MainTabs', { screen: 'Alerts' });
+      }
+    });
+  }, [logado, navegacaoPronta, navigationRef]);
 
   if (auth.status === 'carregando') {
     return (
@@ -86,7 +124,7 @@ export function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef} onReady={() => setNavegacaoPronta(true)}>
       {auth.status === 'deslogado' ? (
         <RootStack.Navigator key="deslogado" screenOptions={{ headerShown: false }} initialRouteName="Login">
           <RootStack.Screen name="Login" component={LoginScreen} />

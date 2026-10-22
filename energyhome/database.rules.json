@@ -122,8 +122,12 @@
       "$uid": {
         ".read": false,
         ".write": "auth != null && auth.uid === $uid",
-        ".validate": "newData.isString()"
+        ".validate": "newData.isString() && newData.val().beginsWith('ExponentPushToken[') && newData.val().length <= 200"
       }
+    },
+    "alertasWorker": {
+      ".read": false,
+      ".write": false
     }
   }
 }

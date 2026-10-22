@@ -18,9 +18,7 @@
       "adaptiveIcon": {
         "backgroundColor": "#f8f9ff"
       },
-      "permissions": [
-        "android.permission.CAMERA"
-      ]
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro"
@@ -40,12 +38,19 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.381830661025-tdh144v1n10s5dadonpbii64d94rdsl0"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#0052ff",
+          "defaultChannel": "alertas"
+        }
       ]
     ],
     "extra": {
       "eas": {
         "projectId": "ea5c7844-779d-4a05-871c-018d62666f6f"
       }
-    }
   }
+}
 }

@@ -1,58 +1,108 @@
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
-import { getDatabase, ref, set } from 'firebase/database';
-import { app } from './authIntegration';
+import { getApp } from 'firebase/app';
+import { getDatabase, ref, set, get, remove } from 'firebase/database';
 
-const db = getDatabase(app);
+// Quem gera os alertas e manda as notificações é o Worker da Cloudflare
+// (pasta alertas-worker). O app só registra o "endereço" de notificação
+// deste celular em /pushTokens/{uid}, e o Worker manda pra ele.
 
-// Enquanto o app está ABERTO (primeiro/segundo plano), isso garante que a
-// notificação apareça normalmente mesmo assim (por padrão o Expo suprime
-// notificações quando o app já está em foco).
+// Canal do Android usado pelo Worker (channelId: 'alertas')
+const CANAL_ALERTAS = 'alertas';
+
+// getApp() em vez de importar authIntegration: evita import circular (o
+// logout de authIntegration usa este arquivo).
+function banco() {
+  return getDatabase(getApp());
+}
+
+// Com o app aberto, mostra a notificação mesmo assim (por padrão o Expo
+// esconde notificação que chega com o app em primeiro plano).
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
   }),
 });
 
+// Token deste celular (pra no logout apagar só se ainda for o dele)
+let tokenDesteCelular: string | null = null;
+
 /**
  * Pede permissão de notificação, gera o token push do Expo pra este
- * aparelho, e salva em /pushTokens/{uid} no Firebase — é esse token que a
- * Cloud Function usa pra saber pra quem mandar a notificação.
+ * celular e salva em /pushTokens/{uid}.
  */
 export async function registerForPushNotifications(uid: string): Promise<void> {
   try {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      return;
-    }
-
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
+      // Criar o canal antes de pedir permissão: no Android 13+ é isso que
+      // faz aparecer o pedido de permissão.
+      await Notifications.setNotificationChannelAsync(CANAL_ALERTAS, {
+        name: 'Alertas de consumo',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#0052ff',
       });
     }
 
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-    const tokenResponse = await Notifications.getExpoPushTokenAsync(
-      projectId ? { projectId } : undefined
-    );
+    const { status: atual } = await Notifications.getPermissionsAsync();
+    let status = atual;
+    if (atual !== 'granted') {
+      status = (await Notifications.requestPermissionsAsync()).status;
+    }
+    if (status !== 'granted') return;
 
-    await set(ref(db, `pushTokens/${uid}`), tokenResponse.data);
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+    if (!projectId) {
+      console.warn('Notificações: falta o extra.eas.projectId no app.json.');
+      return;
+    }
+
+    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
+    tokenDesteCelular = token;
+    await set(ref(banco(), `pushTokens/${uid}`), token);
   } catch (error) {
-    // Não trava o app se, por algum motivo, não conseguir registrar (ex:
-    // emulador sem Google Play Services). O app continua funcionando
-    // normalmente, só sem notificações push nesse caso.
+    // Sem notificação (Expo Go, emulador sem Google Play…) o app segue normal
     console.warn('Não foi possível registrar notificações push:', error);
   }
+}
+
+/**
+ * Chamado antes de sair da conta: apaga o token pra este celular parar de
+ * receber os alertas da conta. Se a conta já registrou outro celular depois,
+ * não mexe.
+ */
+export async function esquecerTokenPush(uid: string): Promise<void> {
+  if (!tokenDesteCelular) return;
+  try {
+    const caminho = ref(banco(), `pushTokens/${uid}`);
+    const salvo = await get(caminho);
+    if (salvo.val() === tokenDesteCelular) await remove(caminho);
+  } catch (error) {
+    console.warn('Não foi possível remover o token de notificação:', error);
+  } finally {
+    tokenDesteCelular = null;
+  }
+}
+
+/**
+ * Avisa quando a pessoa toca numa notificação de alerta, inclusive a que
+ * abriu o app do zero. Devolve a função pra parar de ouvir.
+ */
+export function aoTocarNotificacao(callback: () => void): () => void {
+  let ativo = true;
+  const ultima = Notifications.getLastNotificationResponse();
+  if (ultima) {
+    // Abriu o app pela notificação: espera a navegação montar
+    setTimeout(() => ativo && callback(), 0);
+    Notifications.clearLastNotificationResponse();
+  }
+  const assinatura = Notifications.addNotificationResponseReceivedListener(() => callback());
+  return () => {
+    ativo = false;
+    assinatura.remove();
+  };
 }

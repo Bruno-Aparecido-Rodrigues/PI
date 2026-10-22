@@ -8,9 +8,9 @@ import { registerForPushNotifications } from './src/services/pushNotifications';
 export default function App() {
   useEffect(() => {
     const unsubscribe = subscribeToAuthChanges((user) => {
-      if (user) {
-        //notificações desativadas temporariamenete para teste
-        //registerForPushNotifications(user.uid);
+      // Só conta logada de verdade (e-mail confirmado) recebe alertas
+      if (user?.emailVerified) {
+        registerForPushNotifications(user.uid);
       }
     });
     return unsubscribe;
