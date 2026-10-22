@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
-import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { login, loginWithGoogleIdToken } from '../../services/authIntegration';
 import { signInWithGoogle } from '../../services/googleSignIn';
@@ -19,6 +19,9 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   const [infoMessage, setInfoMessage] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  // Depois de entrar, não precisa navegar: o AppNavigator percebe a sessão
+  // nova e troca sozinho pras telas do app (Dashboard, ou Adicionar
+  // Dispositivo se a conta ainda não tiver hub).
 
   async function handleGoogleLogin() {
     setErrorMessage('');
@@ -145,8 +148,9 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
               <ActivityIndicator color={colors.onSurfaceVariant} />
             ) : (
               <>
-                <MaterialCommunityIcons name="google" size={18} color="#EA4335" />
-                <Text style={styles.googleButtonText}>Entrar com Google</Text>
+                {/* Logo oficial do Google (recortado do pacote de marca do Google, signin-assets.zip) */}
+                <Image source={require('../../../assets/google-g.png')} style={styles.googleLogo} />
+                <Text style={styles.googleButtonText}>Continuar com o Google</Text>
               </>
             )}
           </TouchableOpacity>

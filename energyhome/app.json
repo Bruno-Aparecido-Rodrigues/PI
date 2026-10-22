@@ -6,6 +6,7 @@
     "scheme": "energyhome",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "splash": {
       "backgroundColor": "#f8f9ff"
     },
@@ -16,7 +17,8 @@
     "android": {
       "package": "com.energyhome.app",
       "adaptiveIcon": {
-        "backgroundColor": "#f8f9ff"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0052ff"
       },
       "googleServicesFile": "./google-services.json"
     },
@@ -43,6 +45,7 @@
         "expo-notifications",
         {
           "color": "#0052ff",
+          "icon": "./assets/notification-icon.png",
           "defaultChannel": "alertas"
         }
       ]
@@ -51,6 +54,6 @@
       "eas": {
         "projectId": "ea5c7844-779d-4a05-871c-018d62666f6f"
       }
+    }
   }
-}
 }

@@ -120,7 +120,7 @@
     },
     "pushTokens": {
       "$uid": {
-        ".read": false,
+        ".read": "auth != null && auth.uid === $uid",
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "newData.isString() && newData.val().beginsWith('ExponentPushToken[') && newData.val().length <= 200"
       }

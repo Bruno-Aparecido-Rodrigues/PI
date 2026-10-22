@@ -116,21 +116,27 @@ export const styles = StyleSheet.create({
     color: colors.outline,
     textTransform: 'uppercase',
   },
+  // Botão no padrão "claro" das regras de marca do Google: fundo branco,
+  // borda #747775 de 1px, texto #1F1F1F e o G sempre colorido.
   googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.outlineVariant,
+    borderColor: '#747775',
     borderRadius: 8,
     paddingVertical: 12,
   },
+  googleLogo: {
+    width: 20,
+    height: 20,
+  },
   googleButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: colors.onSurfaceVariant,
+    fontWeight: '500',
+    color: '#1F1F1F',
   },
   footer: {
     flexDirection: 'row',
