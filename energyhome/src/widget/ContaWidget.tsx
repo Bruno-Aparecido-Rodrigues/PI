@@ -30,7 +30,30 @@ function hora(ms: number): string {
 // Icons, o mesmo <MaterialIcons name="account-balance-wallet"> do app)
 const CARTEIRA = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="${TEXTO_SUAVE}" d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`;
 
-export function ContaWidget({ estado }: { estado: EstadoWidget }) {
+// Tamanho de referência (dp) pras fontes abaixo. O widget calcula uma
+// escala pelo tamanho real dele, então o conteúdo cabe em qualquer tamanho
+// que a pessoa deixar na tela inicial.
+const LARGURA_BASE = 300;
+const ALTURA_BASE = 175;
+const ALTURA_COMPACTA = 135; // abaixo disso some a linha da tarifa
+
+interface Props {
+  estado: EstadoWidget;
+  largura?: number; // dp (WidgetInfo.width)
+  altura?: number; // dp (WidgetInfo.height)
+}
+
+function calcularEscala(largura: number, altura: number, compacto: boolean): number {
+  const alturaBase = compacto ? ALTURA_BASE - 30 : ALTURA_BASE;
+  const e = Math.min(largura / LARGURA_BASE, altura / alturaBase);
+  return Math.max(0.65, Math.min(1.3, e));
+}
+
+export function ContaWidget({ estado, largura = 260, altura = ALTURA_BASE }: Props) {
+  const compacto = altura < ALTURA_COMPACTA;
+  const k = calcularEscala(largura, altura, compacto);
+  const t = (n: number) => Math.round(n * k); // tamanho escalado
+
   return (
     <FlexWidget
       clickAction="OPEN_APP"
@@ -39,7 +62,7 @@ export function ContaWidget({ estado }: { estado: EstadoWidget }) {
         width: 'match_parent',
         backgroundColor: AZUL,
         borderRadius: 16,
-        padding: 14,
+        padding: t(14),
         flexDirection: 'column',
         justifyContent: 'center',
       }}
@@ -47,67 +70,88 @@ export function ContaWidget({ estado }: { estado: EstadoWidget }) {
       <FlexWidget
         style={{ width: 'match_parent', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
       >
-        <TextWidget text="Conta Estimada" style={{ fontSize: 16, color: TEXTO_SUAVE }} />
-        <SvgWidget svg={CARTEIRA} style={{ width: 18, height: 18 }} />
+        <TextWidget text="Conta Estimada" style={{ fontSize: t(16), color: TEXTO_SUAVE }} />
+        <SvgWidget svg={CARTEIRA} style={{ width: t(20), height: t(20) }} />
       </FlexWidget>
-      {estado.tipo === 'aviso' ? <Aviso mensagem={estado.mensagem} /> : <Conta {...estado} />}
+      {estado.tipo === 'aviso' ? (
+        <Aviso mensagem={estado.mensagem} t={t} />
+      ) : (
+        <Conta {...estado} t={t} compacto={compacto} />
+      )}
     </FlexWidget>
   );
 }
 
-function Aviso({ mensagem }: { mensagem: string }) {
+function Aviso({ mensagem, t }: { mensagem: string; t: (n: number) => number }) {
   return (
-    <FlexWidget style={{ width: 'match_parent', marginTop: 8 }}>
-      <TextWidget text={mensagem} style={{ fontSize: 14, color: TEXTO }} />
+    <FlexWidget style={{ width: 'match_parent', marginTop: t(8) }}>
+      <TextWidget text={mensagem} style={{ fontSize: t(14), color: TEXTO }} />
     </FlexWidget>
   );
 }
 
-function Conta({ estimada, projetada, tarifa, atualizadoEm, bandeira }: Extract<EstadoWidget, { tipo: 'conta' }>) {
+function Conta({
+  estimada,
+  projetada,
+  tarifa,
+  atualizadoEm,
+  bandeira,
+  t,
+  compacto,
+}: Extract<EstadoWidget, { tipo: 'conta' }> & { t: (n: number) => number; compacto: boolean }) {
   // Barra: quanto da conta projetada já foi consumido (igual ao Dashboard)
   const pct = projetada !== null && projetada > 0 ? Math.round(Math.min(100, (estimada / projetada) * 100)) : 0;
   // Mesma linha do card do Dashboard: "Tarifa: R$ 1,03/kWh · Bandeira Verde"
   const rotulo = rotuloBandeira(bandeira);
   const linhaTarifa = `Tarifa: ${reais(tarifa)}/kWh` + (rotulo ? ` · ${rotulo}` : '');
+  const barra = Math.max(4, t(6));
 
   return (
     <FlexWidget style={{ width: 'match_parent', flexDirection: 'column' }}>
-      <FlexWidget style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: 2 }}>
-        <TextWidget text="R$" style={{ fontSize: 20, fontWeight: '600', color: TEXTO, marginBottom: 3, marginRight: 4 }} />
-        <TextWidget text={numero(estimada)} style={{ fontSize: 34, fontWeight: '700', color: TEXTO }} />
+      <FlexWidget style={{ flexDirection: 'row', alignItems: 'flex-end', marginTop: t(2) }}>
+        <TextWidget
+          text="R$"
+          style={{ fontSize: t(20), fontWeight: '600', color: TEXTO, marginBottom: t(4), marginRight: t(4) }}
+        />
+        <TextWidget text={numero(estimada)} style={{ fontSize: t(34), fontWeight: '700', color: TEXTO }} />
       </FlexWidget>
-      <TextWidget text={linhaTarifa} style={{ fontSize: 14, color: TEXTO_SUAVE }} />
+      {compacto ? null : <TextWidget text={linhaTarifa} style={{ fontSize: t(14), color: TEXTO_SUAVE }} />}
 
       <FlexWidget
         style={{
           width: 'match_parent',
           flexDirection: 'row',
           justifyContent: 'space-between',
-          marginTop: 8,
+          marginTop: t(8),
         }}
       >
-        <TextWidget text="Projetado" style={{ fontSize: 13, color: TEXTO_SUAVE }} />
+        <TextWidget text="Projetado" style={{ fontSize: t(14), color: TEXTO_SUAVE }} />
         <TextWidget
           text={projetada !== null ? reais(projetada) : 'após 24h'}
-          style={{ fontSize: 13, fontWeight: '700', color: TEXTO }}
+          style={{ fontSize: t(14), fontWeight: '700', color: TEXTO }}
         />
       </FlexWidget>
 
       <FlexWidget
         style={{
           width: 'match_parent',
-          height: 6,
+          height: barra,
           flexDirection: 'row',
           backgroundColor: TRILHO,
-          borderRadius: 3,
-          marginTop: 6,
+          borderRadius: barra / 2,
+          marginTop: t(6),
         }}
       >
-        {pct > 0 ? <FlexWidget style={{ flex: pct, height: 6, backgroundColor: TEXTO, borderRadius: 3 }} /> : null}
-        {pct < 100 ? <FlexWidget style={{ flex: 100 - pct, height: 6 }} /> : null}
+        {pct > 0 ? (
+          <FlexWidget style={{ flex: pct, height: barra, backgroundColor: TEXTO, borderRadius: barra / 2 }} />
+        ) : null}
+        {pct < 100 ? <FlexWidget style={{ flex: 100 - pct, height: barra }} /> : null}
       </FlexWidget>
 
-      <TextWidget text={`Atualizado ${hora(atualizadoEm)}`} style={{ fontSize: 12, color: TEXTO_SUAVE, marginTop: 6 }} />
+      <TextWidget
+        text={`Atualizado ${hora(atualizadoEm)}`}
+        style={{ fontSize: t(12), color: TEXTO_SUAVE, marginTop: t(6) }}
+      />
     </FlexWidget>
   );
 }

@@ -17,7 +17,9 @@ function desenhar(estado: EstadoWidget) {
     Promise.resolve(
       requestWidgetUpdate({
         widgetName: NOME_WIDGET,
-        renderWidget: () => <ContaWidget estado={estado} />,
+        renderWidget: (info: { width: number; height: number }) => (
+          <ContaWidget estado={estado} largura={info?.width} altura={info?.height} />
+        ),
         widgetNotFound: () => {}, // nenhum widget na tela inicial: tudo bem
       })
     ).catch(() => {});

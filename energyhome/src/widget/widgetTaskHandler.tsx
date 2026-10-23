@@ -26,7 +26,9 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     case 'WIDGET_UPDATE':
     case 'WIDGET_RESIZED': {
       const estado = await comLimite(calcularEstado(), LIMITE_MS, estadoReserva);
-      props.renderWidget(<ContaWidget estado={estado} />);
+      props.renderWidget(
+        <ContaWidget estado={estado} largura={props.widgetInfo.width} altura={props.widgetInfo.height} />
+      );
       break;
     }
     default:
