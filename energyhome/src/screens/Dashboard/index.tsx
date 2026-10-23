@@ -8,6 +8,7 @@ import { BillEstimateCard } from '../../components/BillEstimateCard';
 import { StatCard } from '../../components/StatCard';
 import { useEnergyData } from '../../hooks/useEnergyData';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
+import { rotuloBandeira } from '../../services/contaMes';
 import { styles } from './style';
 
 interface DashboardScreenProps {
@@ -78,7 +79,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
           projectedValue={projectedValue}
           billingCycleLabel={
             `Tarifa: R$ ${tariff.toFixed(2).replace('.', ',')}/kWh` +
-            (bandeira ? ` · ${bandeira.replace(/^bandeira\s+/i, 'Bandeira ')}` : '')
+            (rotuloBandeira(bandeira) ? ` · ${rotuloBandeira(bandeira)}` : '')
           }
           progressPercent={progressPercent}
           onViewForecast={() => navigation.navigate('Charts')}

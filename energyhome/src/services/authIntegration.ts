@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { firebaseConfig } from './firebaseConfig';
 import { signOutFromGoogle } from './googleSignIn';
 import { esquecerTokenPush, registerForPushNotifications } from './pushNotifications';
+import { limparWidgetConta } from '../widget/atualizarWidget';
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
@@ -107,6 +108,8 @@ export async function logout(): Promise<void> {
   const uid = auth.currentUser?.uid;
   if (uid) await esquecerTokenPush(uid);
   await firebaseSignOut(auth);
+  // O widget da tela inicial deixa de mostrar a conta de quem saiu
+  await limparWidgetConta();
   // Se entrou com Google, encerra também a sessão do Google neste app, pra
   // próxima pessoa poder escolher outra conta.
   await signOutFromGoogle();

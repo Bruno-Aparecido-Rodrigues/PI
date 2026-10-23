@@ -7,9 +7,10 @@ import {
   startOfTodayMs,
   startOfMonthMs,
   startOfDaysAgoMs,
-  startOfNextMonthMs,
   PowerReading,
 } from '../services/energyData';
+import { calcularContaDoMes } from '../services/contaMes';
+import { atualizarWidgetConta } from '../widget/atualizarWidget';
 import {
   ConfigTarifa,
   TARIFA_PADRAO,
@@ -31,11 +32,6 @@ const TREND_HISTORY_DAYS = 7;
 // Abaixo disso, mostramos "dentro do normal" (evita a seta ficar trocando
 // por qualquer oscilação pequena).
 const TREND_TOLERANCE = 0.1; // 10%
-
-// Só projeta a conta do mês depois de ter pelo menos 24h de medição no mês.
-// Com menos que isso, a projeção fica distorcida (ex: medir só a madrugada
-// e projetar o mês inteiro como se fosse sempre madrugada).
-const MIN_PROJECTION_COVERAGE_MS = 24 * 60 * 60 * 1000;
 
 export type Trend = 'up' | 'down' | 'neutral';
 
@@ -119,19 +115,12 @@ export function useEnergyData(hubId: string | null) {
     const month = integrateEnergy(monthReadings);
     const peakWatts = monthReadings.reduce((max, r) => Math.max(max, r.watts), 0);
 
-    // Projeção até o fim do mês: pega o ritmo médio de consumo nas horas que
-    // de fato foram medidas (kWh ÷ tempo medido) e aplica no tempo que falta.
-    let projectedMonthKwh: number | null = null;
-    if (month.coveredMs >= MIN_PROJECTION_COVERAGE_MS) {
-      const kwhPerMs = month.kwh / month.coveredMs;
-      const remainingMs = Math.max(0, startOfNextMonthMs() - Date.now());
-      projectedMonthKwh = month.kwh + kwhPerMs * remainingMs;
-    }
-
     return {
       todayKwh: today.kwh,
       monthKwh: month.kwh,
-      projectedMonthKwh,
+      monthCoveredMs: month.coveredMs,
+      // Última leitura do mês: o widget continua a conta a partir dela
+      lastMonthReading: monthReadings.length > 0 ? monthReadings[monthReadings.length - 1] : null,
       peakWatts,
       pastDaysReadings,
     };
@@ -145,8 +134,26 @@ export function useEnergyData(hubId: string | null) {
 
   const { trend, trendLabel } = describeTrend(currentWatts, typicalWattsNow);
 
-  const estimatedBill = energy.monthKwh * tariff + cip;
-  const projectedBill = energy.projectedMonthKwh !== null ? energy.projectedMonthKwh * tariff + cip : null;
+  const conta = calcularContaDoMes(energy.monthKwh, energy.monthCoveredMs, tariff, cip);
+  const estimatedBill = conta.estimada;
+  const projectedBill = conta.projetada;
+  const bandeira = configTarifa?.modo === 'aneel' ? configTarifa.aneel?.bandeira ?? null : null;
+
+  // Widget da tela inicial: atualiza na hora com os mesmos números do
+  // Dashboard (só quando a conta muda, ~1x por minuto) e guarda o ponto de
+  // partida pra ele continuar a conta sozinho com o app fechado.
+  useEffect(() => {
+    if (!hubId || !configTarifa) return;
+    atualizarWidgetConta({
+      hubId,
+      monthKwh: energy.monthKwh,
+      coveredMs: energy.monthCoveredMs,
+      ultimaLeitura: energy.lastMonthReading,
+      tariff,
+      cip,
+      bandeira,
+    });
+  }, [hubId, configTarifa, energy, tariff, cip, bandeira]);
 
   return {
     currentWatts,
@@ -157,7 +164,7 @@ export function useEnergyData(hubId: string | null) {
     projectedBill,
     tariff,
     cip,
-    bandeira: configTarifa?.modo === 'aneel' ? configTarifa.aneel?.bandeira ?? null : null,
+    bandeira,
     peakWatts: energy.peakWatts,
     trend,
     trendLabel,

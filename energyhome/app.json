@@ -5,8 +5,8 @@
     "version": "1.0.0",
     "scheme": "energyhome",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
     "splash": {
       "backgroundColor": "#f8f9ff"
     },
@@ -23,7 +23,8 @@
       "googleServicesFile": "./google-services.json"
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       [
@@ -44,16 +45,30 @@
       [
         "expo-notifications",
         {
-          "color": "#0052ff",
           "icon": "./assets/notification-icon.png",
+          "color": "#0052ff",
           "defaultChannel": "alertas"
         }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "ContaProjetada",
+              "label": "Conta do mês",
+              "description": "Conta estimada e projeção do mês (A.C.D.C)",
+              "minWidth": "200dp",
+              "minHeight": "150dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "resizeMode": "horizontal|vertical",
+              "previewImage": "./assets/widget-preview.png",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
       ]
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "ea5c7844-779d-4a05-871c-018d62666f6f"
-      }
-    }
+    ]
   }
 }
