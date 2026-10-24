@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
 import { register } from '../../services/authIntegration';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface RegisterScreenProps {
   navigation: any;
 }
 
 export function RegisterScreen({ navigation }: RegisterScreenProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

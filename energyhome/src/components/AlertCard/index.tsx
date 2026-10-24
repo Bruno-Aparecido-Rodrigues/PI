@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface AlertCardProps {
   title: string;
@@ -13,6 +13,8 @@ interface AlertCardProps {
 }
 
 export function AlertCard({ title, time, description, read, onPress }: AlertCardProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.iconCircle, read ? styles.iconCircleRead : styles.iconCircleUnread]}>

@@ -2,12 +2,14 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../../constants/colors';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { useHubStatus } from '../../hooks/useHubStatus';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 export function AppHeader() {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   const insets = useSafeAreaInsets();
   const { hubId } = useCurrentHub();
   const { online } = useHubStatus(hubId);

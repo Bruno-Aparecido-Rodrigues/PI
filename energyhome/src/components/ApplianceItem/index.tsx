@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface ApplianceItemProps {
   icon: keyof typeof MaterialIcons.glyphMap;
@@ -14,6 +14,8 @@ interface ApplianceItemProps {
 }
 
 export function ApplianceItem({ icon, label, subtitle, usage, status, statusColor }: ApplianceItemProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   return (
     <View style={styles.container}>
       <View style={styles.left}>

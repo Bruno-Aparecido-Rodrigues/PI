@@ -1,9 +1,10 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
 import { ChartCurve } from '../ChartCurve';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import type { AppColors } from '../../constants/colors';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface PowerUsageCardProps {
   watts: number;
@@ -36,11 +37,10 @@ const TREND_ICON = {
   neutral: 'trending-flat',
 } as const;
 
-const TREND_COLOR = {
-  up: colors.error,
-  down: colors.tertiary,
-  neutral: colors.onSurfaceVariant,
-};
+// Cor da seta/texto da tendência (depende do tema)
+function corDaTendencia(colors: AppColors) {
+  return { up: colors.error, down: colors.tertiary, neutral: colors.onSurfaceVariant };
+}
 
 export function PowerUsageCard({
   watts,
@@ -50,6 +50,8 @@ export function PowerUsageCard({
   offline = false,
   lastUpdatedAt = null,
 }: PowerUsageCardProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   if (offline) {
     return (
       <View style={styles.container}>
@@ -96,8 +98,8 @@ export function PowerUsageCard({
       </View>
 
       <View style={styles.trendRow}>
-        <MaterialIcons name={TREND_ICON[trend]} size={16} color={TREND_COLOR[trend]} />
-        <Text style={[styles.trendText, { color: TREND_COLOR[trend] }]}>
+        <MaterialIcons name={TREND_ICON[trend]} size={16} color={corDaTendencia(colors)[trend]} />
+        <Text style={[styles.trendText, { color: corDaTendencia(colors)[trend] }]}>
           {comparisonLabel}
         </Text>
       </View>

@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Linking } from 'react-
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { useIsFocused } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface ScanHubScreenProps {
   navigation: any;
@@ -21,6 +21,8 @@ interface ScanHubScreenProps {
  * parâmetros da navegação (scannedData); quem interpreta é a AddDevice.
  */
 export function ScanHubScreen({ navigation }: ScanHubScreenProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   const [permission, requestPermission] = useCameraPermissions();
   const isFocused = useIsFocused();
 

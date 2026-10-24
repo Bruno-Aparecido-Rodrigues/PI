@@ -10,7 +10,6 @@ import {
   FlatList,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
 import {
   ConfigTarifa,
   subscribeToConfigTarifa,
@@ -20,7 +19,8 @@ import {
   sugerirDistribuidora,
   calcularTarifaFinal,
 } from '../../services/tarifa';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface TarifaCardProps {
   hubId: string | null;
@@ -97,6 +97,8 @@ function nomeCurtoBandeira(nome: string | null): string {
  * impostos da conta de luz e iluminação pública. Ver services/tarifa.ts.
  */
 export function TarifaCard({ hubId }: TarifaCardProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   const [config, setConfig] = useState<ConfigTarifa | null>(null);
 
   // Campos editáveis (texto, pra aceitar vírgula enquanto digita)
@@ -463,7 +465,7 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
                 data={listaFiltrada}
                 keyExtractor={(item) => item}
                 keyboardShouldPersistTaps="handled"
-                                renderItem={({ item }) => (
+                renderItem={({ item }) => (
                   <TouchableOpacity style={styles.itemLista} onPress={() => escolherDistribuidora(item)}>
                     <Text style={[styles.itemTexto, item === config?.distribuidora && styles.itemSelecionado]}>
                       {nomeDistribuidora(item)}

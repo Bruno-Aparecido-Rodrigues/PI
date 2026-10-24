@@ -1,7 +1,9 @@
 import { StyleSheet } from 'react-native';
-import { colors } from '../../constants/colors';
+import type { AppColors } from '../../constants/colors';
 
-export const styles = StyleSheet.create({
+// Recebe as cores do tema atual (claro/escuro). Ver src/theme/TemaContext.tsx
+export const criarEstilos = (colors: AppColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.surface,
@@ -30,6 +32,11 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     gap: 16,
+  },
+  temaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   cardHeader: {
     flexDirection: 'row',

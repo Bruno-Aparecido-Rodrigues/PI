@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
 import { AlertCard } from '../../components/AlertCard';
 import { subscribeToAlerts, markAlertAsRead, Alert } from '../../services/alertsData';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 const PERIOD_FILTERS = [
   { id: 'today', label: 'Hoje' },
@@ -76,6 +76,8 @@ function groupByDay(alerts: Alert[]): { label: string; alerts: Alert[] }[] {
 }
 
 export function AlertsScreen({ navigation }: { navigation: any }) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   const { hubId, loading: hubLoading } = useCurrentHub();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilterId>('7d');

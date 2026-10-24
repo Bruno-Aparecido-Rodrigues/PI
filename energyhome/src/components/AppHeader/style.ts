@@ -1,7 +1,9 @@
 import { StyleSheet } from 'react-native';
-import { colors } from '../../constants/colors';
+import type { AppColors } from '../../constants/colors';
 
-export const styles = StyleSheet.create({
+// Recebe as cores do tema atual (claro/escuro). Ver src/theme/TemaContext.tsx
+export const criarEstilos = (colors: AppColors) =>
+  StyleSheet.create({
   container: {
     minHeight: 84,
     paddingHorizontal: 16,

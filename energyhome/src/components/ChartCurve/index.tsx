@@ -1,8 +1,8 @@
 import React from 'react';
 import { View } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { colors } from '../../constants/colors';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface ChartCurveProps {
   height?: number;
@@ -48,10 +48,14 @@ function buildCurvePath(data: number[]): { path: string; lastPoint: { x: number;
 
 export function ChartCurve({
   height = 160,
-  strokeColor = colors.primary,
-  fillColor = `${colors.primary}1A`,
+  strokeColor: strokeColorProp,
+  fillColor: fillColorProp,
   data,
 }: ChartCurveProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
+  const strokeColor = strokeColorProp ?? colors.primary;
+  const fillColor = fillColorProp ?? `${colors.primary}1A`;
   const hasRealData = !!data && data.length >= 2;
   const { path, lastPoint } = hasRealData
     ? buildCurvePath(data!)

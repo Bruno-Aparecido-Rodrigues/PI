@@ -3,8 +3,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { colors } from '../../constants/colors';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 const ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> = {
   Dashboard: 'dashboard',
@@ -21,6 +21,8 @@ const LABELS: Record<string, string> = {
 };
 
 export function BottomNav({ state, navigation }: BottomTabBarProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   const insets = useSafeAreaInsets();
 
   return (

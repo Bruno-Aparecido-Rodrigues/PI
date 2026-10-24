@@ -4,6 +4,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppNavigator } from './src/navigation/AppNavigator';
 import { subscribeToAuthChanges } from './src/services/authIntegration';
 import { registerForPushNotifications } from './src/services/pushNotifications';
+import { TemaProvider, useTema } from './src/theme/TemaContext';
+
+// Ícones da barra de status do Android: escuros no tema claro e vice-versa
+function BarraDeStatus() {
+  const { escuro } = useTema();
+  return <StatusBar style={escuro ? 'light' : 'dark'} />;
+}
 
 export default function App() {
   useEffect(() => {
@@ -18,8 +25,10 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" />
-      <AppNavigator />
+      <TemaProvider>
+        <BarraDeStatus />
+        <AppNavigator />
+      </TemaProvider>
     </SafeAreaProvider>
   );
 }

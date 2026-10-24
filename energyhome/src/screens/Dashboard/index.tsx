@@ -1,7 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
 import { PowerUsageCard } from '../../components/PowerUsageCard';
 import { BillEstimateCard } from '../../components/BillEstimateCard';
@@ -10,13 +9,16 @@ import { useEnergyData } from '../../hooks/useEnergyData';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { useHubStatus } from '../../hooks/useHubStatus';
 import { rotuloBandeira } from '../../services/contaMes';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface DashboardScreenProps {
   navigation: any;
 }
 
 export function DashboardScreen({ navigation }: DashboardScreenProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   const { hubId, loading: hubLoading } = useCurrentHub();
   const {
     currentWatts,

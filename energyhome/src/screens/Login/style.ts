@@ -1,7 +1,9 @@
 import { StyleSheet } from 'react-native';
-import { colors } from '../../constants/colors';
+import type { AppColors } from '../../constants/colors';
 
-export const styles = StyleSheet.create({
+// Recebe as cores do tema atual (claro/escuro). Ver src/theme/TemaContext.tsx
+export const criarEstilos = (colors: AppColors) =>
+  StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.surface,
@@ -137,6 +139,14 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     color: '#1F1F1F',
+  },
+  // Tema escuro: padrão "dark" das regras de marca do Google
+  googleButtonEscuro: {
+    backgroundColor: '#131314',
+    borderColor: '#8E918F',
+  },
+  googleButtonTextEscuro: {
+    color: '#E3E3E3',
   },
   footer: {
     flexDirection: 'row',

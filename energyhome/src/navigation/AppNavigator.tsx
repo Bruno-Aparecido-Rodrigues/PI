@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
+import { NavigationContainer, useNavigationContainerRef, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { User } from 'firebase/auth';
@@ -18,7 +18,7 @@ import { BottomNav } from '../components/BottomNav';
 import { subscribeToAuthChanges } from '../services/authIntegration';
 import { getUserHubs } from '../services/hubPairing';
 import { aoTocarNotificacao } from '../services/pushNotifications';
-import { colors } from '../constants/colors';
+import { useCores, useTema } from '../theme/TemaContext';
 
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -93,6 +93,21 @@ function useAuthState(): AuthState {
 }
 
 export function AppNavigator() {
+  const colors = useCores();
+  const { escuro } = useTema();
+  // Fundo das telas e das transições no tema atual (sem piscar branco no escuro)
+  const base = escuro ? DarkTheme : DefaultTheme;
+  const temaNavegacao = {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: colors.primary,
+      background: colors.background,
+      card: colors.surface,
+      text: colors.onSurface,
+      border: colors.outlineVariant,
+    },
+  };
   const auth = useAuthState();
   const navigationRef = useNavigationContainerRef<any>();
   const [navegacaoPronta, setNavegacaoPronta] = useState(false);
@@ -124,7 +139,7 @@ export function AppNavigator() {
   }
 
   return (
-    <NavigationContainer ref={navigationRef} onReady={() => setNavegacaoPronta(true)}>
+    <NavigationContainer ref={navigationRef} theme={temaNavegacao} onReady={() => setNavegacaoPronta(true)}>
       {auth.status === 'deslogado' ? (
         <RootStack.Navigator key="deslogado" screenOptions={{ headerShown: false }} initialRouteName="Login">
           <RootStack.Screen name="Login" component={LoginScreen} />

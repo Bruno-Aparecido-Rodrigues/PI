@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
 import { resetPassword } from '../../services/authIntegration';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface ForgotPasswordScreenProps {
   navigation: any;
 }
 
 export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
 import { getCurrentUser, logout } from '../../services/authIntegration';
 import { pairHub, parseHubQrCode } from '../../services/hubPairing';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface AddDeviceScreenProps {
   navigation: any;
@@ -18,6 +18,8 @@ function formatAsMac(hubId: string): string {
 }
 
 export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   const [hubId, setHubId] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -134,7 +136,8 @@ export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
           </Text>
         </View>
 
-        {/* Esta tela pode ser a primeira do app (conta ainda sem hub), ou ela pular pro Dashboard ou sair da conta. */}
+        {/* Esta tela pode ser a primeira do app (conta ainda sem hub), então
+            precisa de uma saída: pular pro Dashboard ou sair da conta. */}
         <View style={styles.labelRow}>
           <TouchableOpacity
             onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.replace('MainTabs'))}

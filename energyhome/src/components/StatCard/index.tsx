@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface StatCardProps {
   icon: keyof typeof MaterialIcons.glyphMap;
@@ -14,6 +14,7 @@ interface StatCardProps {
 }
 
 export function StatCard({ icon, iconBackground, iconColor, label, value, unit }: StatCardProps) {
+  const styles = useEstilos(criarEstilos);
   return (
     <View style={styles.container}>
       <View style={[styles.iconCircle, { backgroundColor: iconBackground }]}>

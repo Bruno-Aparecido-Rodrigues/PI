@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
 import { logout, deleteAccount, getCurrentUser } from '../../services/authIntegration';
 import { TarifaCard } from '../../components/TarifaCard';
 import { unpairHub } from '../../services/hubPairing';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos, useTema } from '../../theme/TemaContext';
 
 interface SettingsScreenProps {
   navigation: any;
 }
 
 export function SettingsScreen({ navigation }: SettingsScreenProps) {
+  const styles = useEstilos(criarEstilos);
+  const { escuro, definirEscuro } = useTema();
+  const colors = useCores();
   const { hubId, loading: hubLoading } = useCurrentHub();
   const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -115,6 +118,22 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
                 <Text style={styles.addDeviceText}>Adicionar Dispositivo</Text>
               </TouchableOpacity>
             )}
+          </View>
+        </View>
+
+        {/* Aparência: tema claro ou escuro (vale na hora, fica salvo no celular) */}
+        <View style={styles.card}>
+          <View style={styles.temaRow}>
+            <View style={styles.cardHeader}>
+              <MaterialIcons name={escuro ? 'dark-mode' : 'light-mode'} size={20} color={colors.primary} />
+              <Text style={styles.cardTitle}>Tema escuro</Text>
+            </View>
+            <Switch
+              value={escuro}
+              onValueChange={definirEscuro}
+              trackColor={{ false: colors.outlineVariant, true: colors.primary }}
+              thumbColor={escuro ? colors.onPrimary : colors.surfaceContainerLowest}
+            />
           </View>
         </View>
 

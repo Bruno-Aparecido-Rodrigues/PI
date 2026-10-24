@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
 import { AppHeader } from '../../components/AppHeader';
 import { BarChart, BarChartDatum } from '../../components/BarChart';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
@@ -16,7 +15,8 @@ import {
   averageWattsByHourOfDay,
   PowerReading,
 } from '../../services/energyData';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 const PERIODS = [
   { id: 'today', label: 'Hoje' },
@@ -49,6 +49,8 @@ function daysInCurrentMonthSoFar(): Date[] {
 }
 
 export function ChartsScreen({ navigation }: { navigation: any }) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   const { hubId, loading: hubLoading } = useCurrentHub();
   const [period, setPeriod] = useState<PeriodId>('week');
   const [readings, setReadings] = useState<PowerReading[]>([]);

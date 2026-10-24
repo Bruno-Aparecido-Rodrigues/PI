@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos } from '../../theme/TemaContext';
 
 interface BillEstimateCardProps {
   currentValue: string;
@@ -19,6 +19,8 @@ export function BillEstimateCard({
   progressPercent,
   onViewForecast,
 }: BillEstimateCardProps) {
+  const styles = useEstilos(criarEstilos);
+  const colors = useCores();
   return (
     <View style={styles.container}>
       <View style={styles.header}>

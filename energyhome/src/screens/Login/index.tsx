@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
 import { login, loginWithGoogleIdToken } from '../../services/authIntegration';
 import { signInWithGoogle } from '../../services/googleSignIn';
-import { styles } from './style';
+import { criarEstilos } from './style';
+import { useCores, useEstilos, useTema } from '../../theme/TemaContext';
 
 interface LoginScreenProps {
   navigation: any;
 }
 
 export function LoginScreen({ navigation }: LoginScreenProps) {
+  const styles = useEstilos(criarEstilos);
+  const { escuro } = useTema();
+  const colors = useCores();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -140,7 +143,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
           </View>
 
           <TouchableOpacity
-            style={styles.googleButton}
+            style={[styles.googleButton, escuro && styles.googleButtonEscuro]}
             onPress={handleGoogleLogin}
             disabled={loading || googleLoading}
           >
@@ -150,7 +153,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
               <>
                 {/* Logo oficial do Google (recortado do pacote de marca do Google, signin-assets.zip) */}
                 <Image source={require('../../../assets/google-g.png')} style={styles.googleLogo} />
-                <Text style={styles.googleButtonText}>Continuar com o Google</Text>
+                <Text style={[styles.googleButtonText, escuro && styles.googleButtonTextEscuro]}>Continuar com o Google</Text>
               </>
             )}
           </TouchableOpacity>
