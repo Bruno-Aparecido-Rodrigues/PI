@@ -8,6 +8,7 @@ import { BillEstimateCard } from '../../components/BillEstimateCard';
 import { StatCard } from '../../components/StatCard';
 import { useEnergyData } from '../../hooks/useEnergyData';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
+import { useHubStatus } from '../../hooks/useHubStatus';
 import { rotuloBandeira } from '../../services/contaMes';
 import { styles } from './style';
 
@@ -30,6 +31,10 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
     trend,
     trendLabel,
   } = useEnergyData(hubId);
+  // Hub sem mandar leitura (desligado, sem energia ou sem Wi-Fi): o card ao
+  // vivo mostra o aviso em vez do último valor, que já não vale mais.
+  const hubStatus = useHubStatus(hubId);
+  const hubOffline = hubStatus.loaded && !hubStatus.online;
 
   if (!hubLoading && !hubId) {
     return (
@@ -72,6 +77,8 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
           comparisonLabel={trendLabel}
           trend={trend}
           history={wattsHistory}
+          offline={hubOffline}
+          lastUpdatedAt={hubStatus.lastUpdatedAt}
         />
 
         <BillEstimateCard

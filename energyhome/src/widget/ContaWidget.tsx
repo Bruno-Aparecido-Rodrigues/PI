@@ -1,6 +1,6 @@
 import React from 'react';
 import { FlexWidget, TextWidget, SvgWidget } from 'react-native-android-widget';
-import type { EstadoWidget } from './tipos';
+import { ACAO_ATUALIZAR, type EstadoWidget, type Situacao } from './tipos';
 import { rotuloBandeira } from '../services/contaMes';
 
 // Widget "Conta do mês" da tela inicial do Android. Mesmo visual do card
@@ -18,6 +18,13 @@ function numero(valor: number): string {
 
 function reais(valor: number): string {
   return `R$ ${numero(valor)}`;
+}
+
+/** "Atualizado 09:52" / "Atualizando…" / "De 09:19 · falhou 09:52" */
+function textoRodape(atualizadoEm: number, situacao?: Situacao): string {
+  if (situacao?.tipo === 'atualizando') return 'Atualizando…';
+  if (situacao?.tipo === 'falhou') return `De ${hora(atualizadoEm)} · falhou ${hora(situacao.em)}`;
+  return `Atualizado ${hora(atualizadoEm)}`;
 }
 
 function hora(ms: number): string {
@@ -96,6 +103,7 @@ function Conta({
   tarifa,
   atualizadoEm,
   bandeira,
+  situacao,
   t,
   compacto,
 }: Extract<EstadoWidget, { tipo: 'conta' }> & { t: (n: number) => number; compacto: boolean }) {
@@ -148,10 +156,24 @@ function Conta({
         {pct < 100 ? <FlexWidget style={{ flex: 100 - pct, height: barra }} /> : null}
       </FlexWidget>
 
-      <TextWidget
-        text={`Atualizado ${hora(atualizadoEm)}`}
-        style={{ fontSize: t(12), color: TEXTO_SUAVE, marginTop: t(6) }}
-      />
+      <FlexWidget
+        style={{
+          width: 'match_parent',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: t(6),
+        }}
+      >
+        <TextWidget text={textoRodape(atualizadoEm, situacao)} style={{ fontSize: t(12), color: TEXTO_SUAVE }} />
+        {/* Toque aqui atualiza sem abrir o app (o resto do widget abre o app) */}
+        <FlexWidget clickAction={ACAO_ATUALIZAR} style={{ paddingLeft: t(10), paddingVertical: t(2) }}>
+          <TextWidget text="↻ Atualizar" style={{ fontSize: t(12), fontWeight: '700', color: TEXTO }} />
+        </FlexWidget>
+      </FlexWidget>
+      {situacao?.tipo === 'falhou' ? (
+        <TextWidget text={`Motivo: ${situacao.motivo}`} style={{ fontSize: t(11), color: TEXTO_SUAVE }} />
+      ) : null}
     </FlexWidget>
   );
 }

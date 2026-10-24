@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PowerReading } from '../services/energyData';
 import { calcularContaDoMes } from '../services/contaMes';
-import type { EstadoWidget } from './tipos';
+import type { EstadoWidget, Situacao } from './tipos';
 
 // Último estado da conta do mês, guardado no celular. O app grava enquanto
 // está aberto; com o app fechado, o widget parte daqui e só busca no
@@ -52,7 +52,11 @@ export async function apagarCache(): Promise<void> {
 }
 
 /** O que o widget mostra a partir do cache. */
-export function estadoDoCache(cache: CacheConta, agora: number = Date.now()): EstadoWidget {
+export function estadoDoCache(
+  cache: CacheConta,
+  agora: number = Date.now(),
+  situacao: Situacao = { tipo: 'ok' }
+): EstadoWidget {
   if (cache.competencia !== competenciaDe(agora)) {
     return { tipo: 'aviso', mensagem: 'Abra o app pra atualizar a conta do mês.' };
   }
@@ -64,5 +68,6 @@ export function estadoDoCache(cache: CacheConta, agora: number = Date.now()): Es
     tarifa: cache.tariff,
     atualizadoEm: cache.atualizadoEm,
     bandeira: cache.bandeira,
+    situacao,
   };
 }

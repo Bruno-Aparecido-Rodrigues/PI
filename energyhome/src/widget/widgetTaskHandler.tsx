@@ -8,32 +8,39 @@ import { getUserHubs } from '../services/hubPairing';
 import { integrateEnergy, startOfMonthMs, PowerReading } from '../services/energyData';
 import { configDeSettings } from '../services/tarifa';
 import { ContaWidget } from './ContaWidget';
-import { NOME_WIDGET, EstadoWidget } from './tipos';
+import { NOME_WIDGET, ACAO_ATUALIZAR, EstadoWidget } from './tipos';
 import { lerCache, salvarCache, estadoDoCache, competenciaDe, CacheConta } from './cacheConta';
 
 // Roda com o app FECHADO: quando o widget é colocado na tela inicial, quando
 // é redimensionado e a cada 30 min (updatePeriodMillis no app.json, o mínimo
 // que o Android permite). Recalcula a conta do mês com as leituras novas e
-// redesenha o widget. Tocar no widget abre o app (clickAction OPEN_APP).
+// redesenha o widget. Tocar no widget abre o app (clickAction OPEN_APP);
+// tocar no "↻ Atualizar" do rodapé busca na hora, sem abrir o app.
 
-const LIMITE_MS = 20000; // sem resposta do Firebase nesse tempo, mostra o último valor
+const LIMITE_MS = 15000; // sem resposta do Firebase nesse tempo, mostra o último valor
 
 export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   if (props.widgetInfo.widgetName !== NOME_WIDGET) return;
 
-  switch (props.widgetAction) {
-    case 'WIDGET_ADDED':
-    case 'WIDGET_UPDATE':
-    case 'WIDGET_RESIZED': {
-      const estado = await comLimite(calcularEstado(), LIMITE_MS, estadoReserva);
-      props.renderWidget(
-        <ContaWidget estado={estado} largura={props.widgetInfo.width} altura={props.widgetInfo.height} />
-      );
-      break;
-    }
-    default:
-      break;
-  }
+  const atualizarAgora =
+    props.widgetAction === 'WIDGET_ADDED' ||
+    props.widgetAction === 'WIDGET_UPDATE' ||
+    props.widgetAction === 'WIDGET_RESIZED' ||
+    (props.widgetAction === 'WIDGET_CLICK' && props.clickAction === ACAO_ATUALIZAR);
+  if (!atualizarAgora) return;
+
+  const desenhar = (estado: EstadoWidget) =>
+    props.renderWidget(
+      <ContaWidget estado={estado} largura={props.widgetInfo.width} altura={props.widgetInfo.height} />
+    );
+
+  // 1) Mostra na hora que está buscando (se o Android interromper a tarefa no
+  //    meio, o widget fica em "Atualizando…" e dá pra saber onde parou)
+  const cache = await lerCache();
+  if (cache) desenhar(estadoDoCache(cache, Date.now(), { tipo: 'atualizando' }));
+
+  // 2) Busca e mostra o resultado
+  desenhar(await comLimite(calcularEstado(), LIMITE_MS));
 }
 
 /** Espera a sessão salva no celular ser restaurada (o Firebase faz isso sozinho). */
@@ -118,26 +125,26 @@ async function calcularEstado(): Promise<EstadoWidget> {
   return estadoDoCache(novo, agora);
 }
 
-/** Sem internet ou Firebase lento: último valor conhecido (com a hora dele). */
-async function estadoReserva(): Promise<EstadoWidget> {
+/** Sem internet, Firebase lento ou erro: último valor conhecido, avisando que falhou. */
+async function estadoReserva(motivo: string): Promise<EstadoWidget> {
   const cache = await lerCache();
-  return cache ? estadoDoCache(cache) : { tipo: 'aviso', mensagem: 'Sem conexão. Abra o app pra atualizar.' };
+  return cache
+    ? estadoDoCache(cache, Date.now(), { tipo: 'falhou', em: Date.now(), motivo })
+    : { tipo: 'aviso', mensagem: 'Sem conexão. Abra o app pra atualizar.' };
 }
 
-async function comLimite(
-  tarefa: Promise<EstadoWidget>,
-  ms: number,
-  reserva: () => Promise<EstadoWidget>
-): Promise<EstadoWidget> {
+async function comLimite(tarefa: Promise<EstadoWidget>, ms: number): Promise<EstadoWidget> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const tempo = new Promise<'tempo'>((resolve) => {
     timer = setTimeout(() => resolve('tempo'), ms);
   });
   try {
     const r = await Promise.race([tarefa, tempo]);
-    return r === 'tempo' ? reserva() : r;
-  } catch {
-    return reserva();
+    return r === 'tempo' ? estadoReserva('sem resposta') : r;
+  } catch (erro: any) {
+    console.warn('Widget: falha ao atualizar a conta:', erro);
+    const texto = String(erro?.code ?? erro?.message ?? 'erro');
+    return estadoReserva(/network|offline|unavailable/i.test(texto) ? 'sem internet' : texto.slice(0, 24));
   } finally {
     clearTimeout(timer);
   }

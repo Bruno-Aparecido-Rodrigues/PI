@@ -3,6 +3,15 @@
 
 export const NOME_WIDGET = 'ContaProjetada';
 
+/** Toque no "↻ Atualizar" do widget (WIDGET_CLICK com esse clickAction) */
+export const ACAO_ATUALIZAR = 'ATUALIZAR_CONTA';
+
+/** Como foi a última tentativa de atualizar (aparece no rodapé do widget) */
+export type Situacao =
+  | { tipo: 'ok' }
+  | { tipo: 'atualizando' }
+  | { tipo: 'falhou'; em: number; motivo: string };
+
 export type EstadoWidget =
   | {
       tipo: 'conta';
@@ -11,5 +20,6 @@ export type EstadoWidget =
       tarifa: number; // R$/kWh usado na conta
       atualizadoEm: number;
       bandeira: string | null;
+      situacao?: Situacao;
     }
   | { tipo: 'aviso'; mensagem: string };

@@ -9,36 +9,40 @@ const OFFLINE_THRESHOLD_MS = 10000;
 export interface HubStatus {
   online: boolean;
   lastUpdatedAt: number | null;
+  /** true depois que o Firebase respondeu pela primeira vez (evita mostrar
+   *  "desconectado" por um instante enquanto o app ainda está carregando) */
+  loaded: boolean;
 }
 
 export function useHubStatus(hubId: string | null): HubStatus {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
-  const [online, setOnline] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  // Relógio que avança a cada 2s: o hub pode ficar "quieto" sem nenhum
+  // evento novo disparar o onValue, então o status precisa ser reavaliado.
+  const [agora, setAgora] = useState(() => Date.now());
 
   useEffect(() => {
-    if (!hubId) {
-      setLastUpdatedAt(null);
-      setOnline(false);
-      return;
-    }
+    setLoaded(false);
+    setLastUpdatedAt(null);
+    if (!hubId) return;
 
     const unsubscribe = subscribeToCurrentReading(hubId, (reading) => {
       setLastUpdatedAt(reading?.updatedAt ?? null);
+      setLoaded(true);
     });
 
     return unsubscribe;
   }, [hubId]);
 
-  // Reavalia periodicamente (não só quando chega leitura nova), porque o
-  // hub pode ficar "quieto" sem nenhum evento novo disparar o onValue.
   useEffect(() => {
-    function check() {
-      setOnline(lastUpdatedAt !== null && Date.now() - lastUpdatedAt < OFFLINE_THRESHOLD_MS);
-    }
-    check();
-    const interval = setInterval(check, 2000);
+    const interval = setInterval(() => setAgora(Date.now()), 2000);
     return () => clearInterval(interval);
-  }, [lastUpdatedAt]);
+  }, []);
 
-  return { online, lastUpdatedAt };
+  // Calculado na hora (não num efeito separado): assim, quando a primeira
+  // leitura chega, o app já sabe que está online, sem piscar "desconectado".
+  const online =
+    !!hubId && lastUpdatedAt !== null && Math.max(agora, Date.now()) - lastUpdatedAt < OFFLINE_THRESHOLD_MS;
+
+  return { online, lastUpdatedAt, loaded: !!hubId && loaded };
 }

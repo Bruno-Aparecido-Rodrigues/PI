@@ -55,7 +55,39 @@ export const styles = StyleSheet.create({
     marginTop: 8,
   },
   trendText: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '500',
+  },
+  // Hub desconectado
+  offlineBadge: {
+    backgroundColor: colors.errorContainer,
+  },
+  offlineBadgeText: {
+    color: colors.onErrorContainer,
+  },
+  valueOffline: {
+    color: colors.outline,
+  },
+  offlineBox: {
+    height: 140,
+    marginTop: 12,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    gap: 6,
+  },
+  offlineTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.onSurface,
+  },
+  offlineText: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    color: colors.onSurfaceVariant,
   },
 });
