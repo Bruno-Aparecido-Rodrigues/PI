@@ -10,7 +10,8 @@ export const ACAO_ATUALIZAR = 'ATUALIZAR_CONTA';
 export type Situacao =
   | { tipo: 'ok' }
   | { tipo: 'atualizando' }
-  | { tipo: 'falhou'; em: number; motivo: string };
+  | { tipo: 'falhou'; em: number; motivo: string }
+  | { tipo: 'semInternet'; em: number };
 
 export type EstadoWidget =
   | {
@@ -22,4 +23,4 @@ export type EstadoWidget =
       bandeira: string | null;
       situacao?: Situacao;
     }
-  | { tipo: 'aviso'; mensagem: string };
+  | { tipo: 'aviso'; mensagem: string; semInternet?: boolean };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlexWidget, TextWidget, SvgWidget } from 'react-native-android-widget';
-import { ACAO_ATUALIZAR, type EstadoWidget, type Situacao } from './tipos';
+import { ACAO_ATUALIZAR } from './tipos';
+import type { EstadoWidget, Situacao } from './tipos';
 import { rotuloBandeira } from '../services/contaMes';
 
 // Widget "Conta do mês" da tela inicial do Android. Mesmo visual do card
@@ -36,6 +37,9 @@ function hora(ms: number): string {
 // Carteira do card do Dashboard (ícone "account_balance_wallet" do Material
 // Icons, o mesmo <MaterialIcons name="account-balance-wallet"> do app)
 const CARTEIRA = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="${TEXTO_SUAVE}" d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2h9zm-9-2h10V8H12v8zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>`;
+
+// Wi-Fi cortado (ícone "wifi_off" do Material Icons)
+const SEM_WIFI = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="${TEXTO}" d="M23.64 7c-.45-.34-4.93-4-11.64-4-1.5 0-2.89.19-4.15.48L18.18 13.8 23.64 7zm-6.6 8.22L3.27 1.44 2 2.72l2.05 2.06C1.91 5.76.59 6.82.36 7l11.63 14.49.01.01.01-.01 3.9-4.86 3.32 3.32 1.27-1.27-3.46-3.46z"/></svg>`;
 
 // Tamanho de referência (dp) pras fontes abaixo. O widget calcula uma
 // escala pelo tamanho real dele, então o conteúdo cabe em qualquer tamanho
@@ -81,7 +85,7 @@ export function ContaWidget({ estado, largura = 260, altura = ALTURA_BASE }: Pro
         <SvgWidget svg={CARTEIRA} style={{ width: t(20), height: t(20) }} />
       </FlexWidget>
       {estado.tipo === 'aviso' ? (
-        <Aviso mensagem={estado.mensagem} t={t} />
+        <Aviso mensagem={estado.mensagem} semInternet={estado.semInternet} t={t} />
       ) : (
         <Conta {...estado} t={t} compacto={compacto} />
       )}
@@ -89,10 +93,24 @@ export function ContaWidget({ estado, largura = 260, altura = ALTURA_BASE }: Pro
   );
 }
 
-function Aviso({ mensagem, t }: { mensagem: string; t: (n: number) => number }) {
+function Aviso({
+  mensagem,
+  semInternet,
+  t,
+}: {
+  mensagem: string;
+  semInternet?: boolean;
+  t: (n: number) => number;
+}) {
   return (
-    <FlexWidget style={{ width: 'match_parent', marginTop: t(8) }}>
+    <FlexWidget style={{ width: 'match_parent', marginTop: t(8), flexDirection: 'row', alignItems: 'center' }}>
+      {semInternet ? <SvgWidget svg={SEM_WIFI} style={{ width: t(22), height: t(22), marginRight: t(8) }} /> : null}
       <TextWidget text={mensagem} style={{ fontSize: t(14), color: TEXTO }} />
+      {semInternet ? (
+        <FlexWidget clickAction={ACAO_ATUALIZAR} style={{ paddingLeft: t(10), paddingVertical: t(2) }}>
+          <TextWidget text="↻" style={{ fontSize: t(16), fontWeight: '700', color: TEXTO }} />
+        </FlexWidget>
+      ) : null}
     </FlexWidget>
   );
 }
@@ -165,10 +183,20 @@ function Conta({
           marginTop: t(6),
         }}
       >
-        <TextWidget text={textoRodape(atualizadoEm, situacao)} style={{ fontSize: t(12), color: TEXTO_SUAVE }} />
+        {situacao?.tipo === 'semInternet' ? (
+          <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <SvgWidget svg={SEM_WIFI} style={{ width: t(16), height: t(16), marginRight: t(6) }} />
+            <TextWidget text="Sem conexão com a internet" style={{ fontSize: t(12), fontWeight: '700', color: TEXTO }} />
+          </FlexWidget>
+        ) : (
+          <TextWidget text={textoRodape(atualizadoEm, situacao)} style={{ fontSize: t(12), color: TEXTO_SUAVE }} />
+        )}
         {/* Toque aqui atualiza sem abrir o app (o resto do widget abre o app) */}
         <FlexWidget clickAction={ACAO_ATUALIZAR} style={{ paddingLeft: t(10), paddingVertical: t(2) }}>
-          <TextWidget text="↻ Atualizar" style={{ fontSize: t(12), fontWeight: '700', color: TEXTO }} />
+          <TextWidget
+            text={situacao?.tipo === 'semInternet' ? '↻' : '↻ Atualizar'}
+            style={{ fontSize: t(12), fontWeight: '700', color: TEXTO }}
+          />
         </FlexWidget>
       </FlexWidget>
       {situacao?.tipo === 'falhou' ? (

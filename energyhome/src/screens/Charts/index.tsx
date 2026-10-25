@@ -17,6 +17,7 @@ import {
 } from '../../services/energyData';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useRecarregar } from '../../hooks/useRecarregar';
 
 const PERIODS = [
   { id: 'today', label: 'Hoje' },
@@ -48,7 +49,10 @@ function daysInCurrentMonthSoFar(): Date[] {
   return days;
 }
 
-export function ChartsScreen({ navigation }: { navigation: any }) {
+function ChartsConteudo({
+  navigation,
+  refreshControl,
+}: { navigation: any } & { refreshControl: React.ReactElement<any> }) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
   const { hubId, loading: hubLoading } = useCurrentHub();
@@ -128,7 +132,7 @@ export function ChartsScreen({ navigation }: { navigation: any }) {
   return (
     <View style={styles.screen}>
       <AppHeader />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} refreshControl={refreshControl}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Análise de Consumo</Text>
           <Text style={styles.subtitle}>Um mergulho no desempenho energético da sua casa.</Text>
@@ -182,4 +186,10 @@ export function ChartsScreen({ navigation }: { navigation: any }) {
       </ScrollView>
     </View>
   );
+}
+
+// Arrastar pra baixo no topo da tela recarrega (ver hooks/useRecarregar)
+export function ChartsScreen(props: { navigation: any }) {
+  const { chave, refreshControl } = useRecarregar();
+  return <ChartsConteudo key={chave} {...props} refreshControl={refreshControl} />;
 }

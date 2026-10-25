@@ -7,6 +7,7 @@ import { subscribeToAlerts, markAlertAsRead, Alert } from '../../services/alerts
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useRecarregar } from '../../hooks/useRecarregar';
 
 const PERIOD_FILTERS = [
   { id: 'today', label: 'Hoje' },
@@ -75,7 +76,10 @@ function groupByDay(alerts: Alert[]): { label: string; alerts: Alert[] }[] {
   return groups;
 }
 
-export function AlertsScreen({ navigation }: { navigation: any }) {
+function AlertsConteudo({
+  navigation,
+  refreshControl,
+}: { navigation: any } & { refreshControl: React.ReactElement<any> }) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
   const { hubId, loading: hubLoading } = useCurrentHub();
@@ -123,7 +127,7 @@ export function AlertsScreen({ navigation }: { navigation: any }) {
   return (
     <View style={styles.screen}>
       <AppHeader />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} refreshControl={refreshControl}>
         <View style={styles.headerRow}>
           <Text style={styles.title}>Histórico de Alertas</Text>
           <Text style={styles.subtitle}>Revise cronologicamente as anomalias de energia e notificações do sistema.</Text>
@@ -224,4 +228,10 @@ export function AlertsScreen({ navigation }: { navigation: any }) {
       </Modal>
     </View>
   );
+}
+
+// Arrastar pra baixo no topo da tela recarrega (ver hooks/useRecarregar)
+export function AlertsScreen(props: { navigation: any }) {
+  const { chave, refreshControl } = useRecarregar();
+  return <AlertsConteudo key={chave} {...props} refreshControl={refreshControl} />;
 }

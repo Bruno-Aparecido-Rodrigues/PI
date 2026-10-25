@@ -11,12 +11,16 @@ import { useHubStatus } from '../../hooks/useHubStatus';
 import { rotuloBandeira } from '../../services/contaMes';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useRecarregar } from '../../hooks/useRecarregar';
 
 interface DashboardScreenProps {
   navigation: any;
 }
 
-export function DashboardScreen({ navigation }: DashboardScreenProps) {
+function DashboardConteudo({
+  navigation,
+  refreshControl,
+}: DashboardScreenProps & { refreshControl: React.ReactElement<any> }) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
   const { hubId, loading: hubLoading } = useCurrentHub();
@@ -66,7 +70,7 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
   return (
     <View style={styles.screen}>
       <AppHeader />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} refreshControl={refreshControl}>
         <View style={styles.welcomeRow}>
           <View>
             <Text style={styles.welcomeSubtitle}>Bem-vindo de volta</Text>
@@ -123,4 +127,10 @@ export function DashboardScreen({ navigation }: DashboardScreenProps) {
       </ScrollView>
     </View>
   );
+}
+
+// Arrastar pra baixo no topo da tela recarrega (ver hooks/useRecarregar)
+export function DashboardScreen(props: DashboardScreenProps) {
+  const { chave, refreshControl } = useRecarregar();
+  return <DashboardConteudo key={chave} {...props} refreshControl={refreshControl} />;
 }

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
+import { useSemInternet } from '../hooks/useSemInternet';
 import { NavigationContainer, useNavigationContainerRef, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -77,9 +79,15 @@ function useAuthState(): AuthState {
       setEstado({ status: 'carregando' });
       let temHub = true;
       try {
-        temHub = (await getUserHubs(user.uid)).length > 0;
+        // Sem internet o Firebase não responde nem dá erro: espera no máximo
+        // 6 s e abre no Dashboard, que mostra o aviso de "sem conexão".
+        const hubs = await Promise.race([
+          getUserHubs(user.uid),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 6000)),
+        ]);
+        if (hubs) temHub = hubs.length > 0;
       } catch {
-        // Sem internet, por exemplo: abre no Dashboard, que lida com a falta de hub.
+        // erro de rede: segue pro Dashboard
       }
       if (!cancelado) setEstado({ status: 'logado', uid: user.uid, temHub });
     });
@@ -95,6 +103,7 @@ function useAuthState(): AuthState {
 export function AppNavigator() {
   const colors = useCores();
   const { escuro } = useTema();
+  const semInternet = useSemInternet();
   // Fundo das telas e das transições no tema atual (sem piscar branco no escuro)
   const base = escuro ? DarkTheme : DefaultTheme;
   const temaNavegacao = {
@@ -134,6 +143,15 @@ export function AppNavigator() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface }}>
         <ActivityIndicator size="large" color={colors.primary} />
+        {semInternet ? (
+          <View style={{ alignItems: 'center', marginTop: 20, paddingHorizontal: 32, gap: 6 }}>
+            <MaterialIcons name="wifi-off" size={28} color={colors.error} />
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.onSurface }}>Sem conexão com a internet</Text>
+            <Text style={{ fontSize: 13, color: colors.onSurfaceVariant, textAlign: 'center' }}>
+              Tentando conectar… Os dados aparecem assim que a conexão voltar.
+            </Text>
+          </View>
+        ) : null}
       </View>
     );
   }

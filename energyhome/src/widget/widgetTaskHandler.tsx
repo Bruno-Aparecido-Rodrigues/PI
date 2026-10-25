@@ -10,6 +10,7 @@ import { configDeSettings } from '../services/tarifa';
 import { ContaWidget } from './ContaWidget';
 import { NOME_WIDGET, ACAO_ATUALIZAR, EstadoWidget } from './tipos';
 import { lerCache, salvarCache, estadoDoCache, competenciaDe, CacheConta } from './cacheConta';
+import { firebaseConfig } from '../services/firebaseConfig';
 
 // Roda com o app FECHADO: quando o widget é colocado na tela inicial, quando
 // é redimensionado e a cada 30 min (updatePeriodMillis no app.json, o mínimo
@@ -39,7 +40,13 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
   const cache = await lerCache();
   if (cache) desenhar(estadoDoCache(cache, Date.now(), { tipo: 'atualizando' }));
 
-  // 2) Busca e mostra o resultado
+  // 2) Sem internet: avisa logo (sem esperar o limite da busca)
+  if (!(await temInternet())) {
+    desenhar(await estadoSemInternet());
+    return;
+  }
+
+  // 3) Busca e mostra o resultado
   desenhar(await comLimite(calcularEstado(), LIMITE_MS));
 }
 
@@ -125,6 +132,29 @@ async function calcularEstado(): Promise<EstadoWidget> {
   return estadoDoCache(novo, agora);
 }
 
+/** Teste rápido de conexão: qualquer resposta do servidor do Firebase (até
+ *  "acesso negado") prova que há internet; erro de rede ou demora = sem. */
+async function temInternet(): Promise<boolean> {
+  const controle = new AbortController();
+  const timer = setTimeout(() => controle.abort(), 5000);
+  try {
+    await fetch(`${firebaseConfig.databaseURL}/.json?shallow=true`, { signal: controle.signal });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Celular sem internet: último valor conhecido com o aviso (ou só o aviso). */
+async function estadoSemInternet(): Promise<EstadoWidget> {
+  const cache = await lerCache();
+  return cache
+    ? estadoDoCache(cache, Date.now(), { tipo: 'semInternet', em: Date.now() })
+    : { tipo: 'aviso', mensagem: 'Sem conexão com a internet', semInternet: true };
+}
+
 /** Sem internet, Firebase lento ou erro: último valor conhecido, avisando que falhou. */
 async function estadoReserva(motivo: string): Promise<EstadoWidget> {
   const cache = await lerCache();
@@ -144,7 +174,8 @@ async function comLimite(tarefa: Promise<EstadoWidget>, ms: number): Promise<Est
   } catch (erro: any) {
     console.warn('Widget: falha ao atualizar a conta:', erro);
     const texto = String(erro?.code ?? erro?.message ?? 'erro');
-    return estadoReserva(/network|offline|unavailable/i.test(texto) ? 'sem internet' : texto.slice(0, 24));
+    if (/network|offline|unavailable/i.test(texto)) return estadoSemInternet();
+    return estadoReserva(texto.slice(0, 24));
   } finally {
     clearTimeout(timer);
   }

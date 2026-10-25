@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { useHubStatus } from '../../hooks/useHubStatus';
+import { SemInternetAviso } from '../SemInternetAviso';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
 
@@ -15,6 +16,7 @@ export function AppHeader() {
   const { online } = useHubStatus(hubId);
 
   return (
+    <View>
     <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
       <View style={styles.left}>
         <MaterialIcons name="bolt" size={22} color={colors.primary} />
@@ -31,6 +33,8 @@ export function AppHeader() {
           </View>
         )}
       </View>
+    </View>
+    <SemInternetAviso />
     </View>
   );
 }
