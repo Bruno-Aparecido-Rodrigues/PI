@@ -62,7 +62,7 @@
 
 const char* WIFI_SSID = "wifi-nome";
 const char* WIFI_PASSWORD = "senha";
-const char* DATABASE_URL = "banco";
+const char* DATABASE_URL = "https://pi-energia-db-default-rtdb.firebaseio.com";
 
 
 // MAC VIRTUAL, necessário porque esta placa não tem MAC de fábrica válido (vem zerado).

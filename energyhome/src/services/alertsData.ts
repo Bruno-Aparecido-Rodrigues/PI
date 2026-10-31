@@ -1,4 +1,4 @@
-import { getDatabase, ref, onValue, update } from 'firebase/database';
+import { getDatabase, ref, onValue, update, get, set } from 'firebase/database';
 import { app } from './authIntegration';
 import { getAlertTemplate } from '../constants/alertMessages';
 
@@ -49,6 +49,38 @@ export function subscribeToAlerts(hubId: string, callback: (alerts: Alert[]) => 
     alerts.sort((a, b) => b.timestamp - a.timestamp);
     callback(alerts);
   });
+}
+
+/**
+ * Fim do período de aprendizado dos alertas de consumo (ms), gravado pelo
+ * Worker em /hubs/{hubId}/aprendizadoAte. Nos primeiros 30 dias do hub ele só
+ * aprende o consumo da casa e não manda alertas de pico/prolongado/projeção.
+ * null = o Worker ainda não rodou pra esse hub.
+ */
+export function subscribeToAprendizado(hubId: string, callback: (ate: number | null) => void) {
+  return onValue(ref(db, `hubs/${hubId}/aprendizadoAte`), (snapshot) => {
+    const v = snapshot.val();
+    callback(typeof v === 'number' ? v : null);
+  });
+}
+
+const APRENDIZADO_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Atalho escondido (7 toques no "A.C.D.C" do topo, ver AppHeader): encerra o
+ * período de aprendizado na hora, pra testar/demonstrar os alertas de
+ * consumo. Se já tiver encerrado, começa um novo período de 30 dias.
+ */
+export async function alternarAprendizado(hubId: string): Promise<'encerrado' | 'reiniciado'> {
+  const caminho = ref(db, `hubs/${hubId}/aprendizadoAte`);
+  const ate = (await get(caminho)).val();
+  const agora = Date.now();
+  if (typeof ate === 'number' && ate > agora) {
+    await set(caminho, agora);
+    return 'encerrado';
+  }
+  await set(caminho, agora + APRENDIZADO_MS);
+  return 'reiniciado';
 }
 
 /** Marca um alerta como visualizado. */

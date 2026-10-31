@@ -32,13 +32,15 @@ export function calcularContaDoMes(
   coveredMs: number,
   tariff: number,
   cip: number,
-  agora: number = Date.now()
+  agora: number = Date.now(),
+  /** Fim do período da conta (ciclo de leitura ou fim do mês, ver services/ciclo.ts) */
+  fimDoPeriodo?: number
 ): ContaDoMes {
   let projetadaKwh: number | null = null;
   if (coveredMs >= MIN_PROJECTION_COVERAGE_MS) {
     const kwhPorMs = monthKwh / coveredMs;
     const d = new Date(agora);
-    const fimDoMes = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+    const fimDoMes = fimDoPeriodo ?? new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
     const restanteMs = Math.max(0, fimDoMes - agora);
     projetadaKwh = monthKwh + kwhPorMs * restanteMs;
   }

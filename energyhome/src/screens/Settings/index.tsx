@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { CicloCard } from '../../components/CicloCard';
 import { AppHeader } from '../../components/AppHeader';
 import { logout, deleteAccount, getCurrentUser } from '../../services/authIntegration';
 import { TarifaCard } from '../../components/TarifaCard';
@@ -75,6 +76,8 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
         <Text style={styles.subtitle}>Gerencie suas preferências de energia e conexões da conta.</Text>
 
         {feedback ? <Text style={styles.feedbackText}>{feedback}</Text> : null}
+        
+        <CicloCard hubId={hubId} />
 
         {/* Tarifa manual ou automática (ANEEL), impostos e iluminação pública */}
         <TarifaCard hubId={hubId} />

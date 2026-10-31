@@ -179,4 +179,25 @@ export const criarEstilos = (colors: AppColors) =>
     fontWeight: '600',
     color: colors.primary,
   },
+  aprendizadoCard: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: 12,
+    padding: 14,
+  },
+  aprendizadoTextos: {
+    flex: 1,
+    gap: 4,
+  },
+  aprendizadoTitulo: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.onSurface,
+  },
+  aprendizadoTexto: {
+    fontSize: 13,
+    color: colors.onSurfaceVariant,
+  },
 });

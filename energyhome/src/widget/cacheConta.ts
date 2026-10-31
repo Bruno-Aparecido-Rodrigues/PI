@@ -3,7 +3,8 @@ import type { PowerReading } from '../services/energyData';
 import { calcularContaDoMes } from '../services/contaMes';
 import type { EstadoWidget, Situacao } from './tipos';
 
-// Último estado da conta do mês, guardado no celular. O app grava enquanto
+// Último estado da conta do período (ciclo da conta ou mês, ver
+// services/ciclo.ts), guardado no celular. O app grava enquanto
 // está aberto; com o app fechado, o widget parte daqui e só busca no
 // Firebase as leituras que chegaram depois de `ultimaLeitura` (poucos KB, em
 // vez do mês inteiro a cada atualização).
@@ -12,7 +13,10 @@ const CHAVE = 'widgetConta:v1';
 
 export interface CacheConta {
   hubId: string;
-  competencia: string; // "2026-10" (mês das leituras somadas)
+  competencia: string; // "2026-10" (mês das leituras somadas; caches antigos)
+  /** Período da conta das leituras somadas (ciclo ou mês). Ausente em caches antigos. */
+  periodoInicio?: number;
+  periodoFim?: number;
   monthKwh: number;
   coveredMs: number;
   ultimaLeitura: PowerReading | null;
@@ -57,10 +61,12 @@ export function estadoDoCache(
   agora: number = Date.now(),
   situacao: Situacao = { tipo: 'ok' }
 ): EstadoWidget {
-  if (cache.competencia !== competenciaDe(agora)) {
+  const venceu =
+    typeof cache.periodoFim === 'number' ? agora >= cache.periodoFim : cache.competencia !== competenciaDe(agora);
+  if (venceu) {
     return { tipo: 'aviso', mensagem: 'Abra o app pra atualizar a conta do mês.' };
   }
-  const conta = calcularContaDoMes(cache.monthKwh, cache.coveredMs, cache.tariff, cache.cip, agora);
+  const conta = calcularContaDoMes(cache.monthKwh, cache.coveredMs, cache.tariff, cache.cip, agora, cache.periodoFim);
   return {
     tipo: 'conta',
     estimada: conta.estimada,

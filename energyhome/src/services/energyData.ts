@@ -1,4 +1,4 @@
-import { getDatabase, ref, onValue, query, orderByChild, startAt, get, set } from 'firebase/database';
+import { getDatabase, ref, onValue, onChildAdded, query, orderByChild, startAt, get, set } from 'firebase/database';
 import { app } from './authIntegration';
 
 const db = getDatabase(app);
@@ -64,31 +64,142 @@ export function subscribeToCurrentReading(hubId: string, callback: (reading: Cur
   });
 }
 
-/** Observa todas as leituras de histórico de um hub a partir de um timestamp (ms). */
+// ─────────────────────────────────────────────────────────────────────────
+// Histórico de leituras (Dashboard e Gráficos)
+//
+// No fim do mês são ~44 mil leituras. Com onValue, o Firebase entregava a
+// lista INTEIRA de novo a cada leitura nova (1 por minuto), em cada tela que
+// assinava, e o app travava. Agora:
+//  - baixa o histórico uma vez (onValue com onlyOnce);
+//  - depois só recebe as leituras novas (onChildAdded), uma a uma;
+//  - telas que pedem o mesmo período dividem a mesma assinatura (o
+//    Dashboard e os Gráficos baixam o histórico uma vez só).
+// O onChildAdded começa 8 h antes da última leitura baixada: se o hub ficou
+// sem Wi-Fi, ele reenvia o buffer (até ~8 h) com horários antigos, e essas
+// leituras também entram. As repetidas são ignoradas pela chave.
+// ─────────────────────────────────────────────────────────────────────────
+
+const JANELA_ATRASADAS_MS = 8 * 60 * 60 * 1000;
+const ESPERA_AVISO_MS = 300; // junta várias leituras chegando de uma vez num aviso só
+
+type OuvinteLeituras = (readings: PowerReading[]) => void;
+
+interface FonteLeituras {
+  leituras: PowerReading[];
+  carregado: boolean;
+  ouvintes: Set<OuvinteLeituras>;
+  parar: () => void;
+}
+
+const fontes = new Map<string, FonteLeituras>();
+
+function lerLeitura(value: any): PowerReading | null {
+  if (typeof value?.watts !== 'number' || typeof value?.timestamp !== 'number') return null;
+  return {
+    watts: value.watts,
+    timestamp: value.timestamp,
+    energyKwh: typeof value?.energyKwh === 'number' ? value.energyKwh : undefined,
+  };
+}
+
+function criarFonte(hubId: string, sinceTimestamp: number): FonteLeituras {
+  const fonte: FonteLeituras = { leituras: [], carregado: false, ouvintes: new Set(), parar: () => {} };
+  const base = ref(db, `hubs/${hubId}/readings`);
+  const chaves = new Set<string>();
+  let lista: PowerReading[] = [];
+  let parado = false;
+  let pararNovas: (() => void) | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const avisar = () => {
+    // Cópia nova a cada aviso: o React só redesenha se a referência mudar
+    fonte.leituras = lista.slice();
+    fonte.ouvintes.forEach((ouvinte) => ouvinte(fonte.leituras));
+  };
+
+  const pararInicial = onValue(
+    query(base, orderByChild('timestamp'), startAt(sinceTimestamp)),
+    (snapshot) => {
+      if (parado) return;
+      const dados: PowerReading[] = [];
+      snapshot.forEach((child) => {
+        const r = lerLeitura(child.val());
+        if (r && child.key) {
+          chaves.add(child.key);
+          dados.push(r);
+        }
+      });
+      lista = dados.sort((a, b) => a.timestamp - b.timestamp);
+      fonte.carregado = true;
+      avisar();
+
+      const ultima = lista.length > 0 ? lista[lista.length - 1].timestamp : sinceTimestamp;
+      const desde = Math.max(sinceTimestamp, ultima - JANELA_ATRASADAS_MS);
+      pararNovas = onChildAdded(query(base, orderByChild('timestamp'), startAt(desde)), (child) => {
+        if (!child.key || chaves.has(child.key)) return;
+        const r = lerLeitura(child.val());
+        if (!r) return;
+        chaves.add(child.key);
+        if (lista.length === 0 || r.timestamp >= lista[lista.length - 1].timestamp) {
+          lista.push(r);
+        } else {
+          // Leitura atrasada (buffer do hub): entra no lugar certo
+          lista.push(r);
+          lista.sort((a, b) => a.timestamp - b.timestamp);
+        }
+        if (!timer) {
+          timer = setTimeout(() => {
+            timer = null;
+            if (!parado) avisar();
+          }, ESPERA_AVISO_MS);
+        }
+      });
+    },
+    (erro) => console.warn('Não foi possível ler o histórico de leituras:', erro),
+    { onlyOnce: true }
+  );
+
+  fonte.parar = () => {
+    parado = true;
+    pararInicial();
+    pararNovas?.();
+    if (timer) clearTimeout(timer);
+  };
+  return fonte;
+}
+
+/** Observa as leituras de histórico de um hub a partir de um timestamp (ms). */
 export function subscribeToReadingsSince(
   hubId: string,
   sinceTimestamp: number,
   callback: (readings: PowerReading[]) => void
 ) {
-  const readingsQuery = query(
-    ref(db, `hubs/${hubId}/readings`),
-    orderByChild('timestamp'),
-    startAt(sinceTimestamp)
-  );
-  return onValue(readingsQuery, (snapshot) => {
-    const readings: PowerReading[] = [];
-    snapshot.forEach((child) => {
-      const value = child.val();
-      if (typeof value?.watts === 'number' && typeof value?.timestamp === 'number') {
-        readings.push({
-          watts: value.watts,
-          timestamp: value.timestamp,
-          energyKwh: typeof value?.energyKwh === 'number' ? value.energyKwh : undefined,
-        });
-      }
-    });
-    callback(readings);
-  });
+  const id = `${hubId}|${sinceTimestamp}`;
+  let fonte = fontes.get(id);
+  if (!fonte) {
+    fonte = criarFonte(hubId, sinceTimestamp);
+    fontes.set(id, fonte);
+  }
+  const atual = fonte;
+  atual.ouvintes.add(callback);
+  if (atual.carregado) callback(atual.leituras);
+
+  return () => {
+    atual.ouvintes.delete(callback);
+    if (atual.ouvintes.size === 0) {
+      atual.parar();
+      if (fontes.get(id) === atual) fontes.delete(id);
+    }
+  };
+}
+
+/**
+ * Desde quando baixar o histórico: o período da conta (ciclo ou mês) e os
+ * últimos 7 dias (perfil por horário e "normal" do horário). Dashboard e
+ * Gráficos usam o mesmo valor pra dividir a mesma assinatura.
+ */
+export function inicioDoHistorico(inicioDoPeriodo: number): number {
+  return Math.min(inicioDoPeriodo, startOfDaysAgoMs(7));
 }
 
 // Só vale pro cálculo ANTIGO (por Watts, sem contador): se duas leituras

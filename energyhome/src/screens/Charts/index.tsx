@@ -6,15 +6,15 @@ import { BarChart, BarChartDatum } from '../../components/BarChart';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import {
   subscribeToReadingsSince,
-  getTariff,
-  startOfTodayMs,
   startOfDaysAgoMs,
-  startOfMonthMs,
+  inicioDoHistorico,
   bucketKwhByDay,
   bucketKwhByHourToday,
   averageWattsByHourOfDay,
   PowerReading,
 } from '../../services/energyData';
+import { ConfigTarifa, subscribeToConfigTarifa, TARIFA_PADRAO } from '../../services/tarifa';
+import { periodoAtual, diaMes } from '../../services/ciclo';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
 import { useRecarregar } from '../../hooks/useRecarregar';
@@ -40,11 +40,16 @@ function buildDayList(count: number): Date[] {
   return days;
 }
 
-function daysInCurrentMonthSoFar(): Date[] {
-  const now = new Date();
+/** Dias do período da conta (ciclo ou mês) até hoje. */
+function daysSince(inicio: number): Date[] {
   const days: Date[] = [];
-  for (let day = 1; day <= now.getDate(); day++) {
-    days.push(new Date(now.getFullYear(), now.getMonth(), day));
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const d = new Date(inicio);
+  d.setHours(0, 0, 0, 0);
+  while (d.getTime() <= hoje.getTime()) {
+    days.push(new Date(d));
+    d.setDate(d.getDate() + 1);
   }
   return days;
 }
@@ -58,29 +63,36 @@ function ChartsConteudo({
   const { hubId, loading: hubLoading } = useCurrentHub();
   const [period, setPeriod] = useState<PeriodId>('week');
   const [readings, setReadings] = useState<PowerReading[]>([]);
-  const [profileReadings, setProfileReadings] = useState<PowerReading[]>([]);
-  const [tariff, setTariff] = useState(0.85);
+  const [config, setConfig] = useState<ConfigTarifa | null>(null);
 
-  // Janela de leituras usada pelos gráficos de kWh/custo, de acordo com o período escolhido.
+  // Tarifa final e ciclo da conta (os mesmos do Dashboard)
   useEffect(() => {
     if (!hubId) return;
-    const since =
-      period === 'today' ? startOfTodayMs() : period === 'week' ? startOfDaysAgoMs(6) : startOfMonthMs();
-    const unsubscribe = subscribeToReadingsSince(hubId, since, setReadings);
-    return unsubscribe;
-  }, [period, hubId]);
-
-  // Últimos 7 dias, sempre, pro gráfico de "Perfil de Consumo por Horário".
-  useEffect(() => {
-    if (!hubId) return;
-    const unsubscribe = subscribeToReadingsSince(hubId, startOfDaysAgoMs(6), setProfileReadings);
-    return unsubscribe;
+    return subscribeToConfigTarifa(hubId, setConfig);
   }, [hubId]);
 
+  const tariff = config?.tariff ?? TARIFA_PADRAO;
+  const periodo = periodoAtual(config?.ciclo ?? null);
+  const ciclo = periodo.tipo === 'ciclo';
+
+  // Uma assinatura só, do mesmo período do Dashboard (dividem o download):
+  // cobre o ciclo/mês e os últimos 7 dias. Trocar de aba não baixa de novo,
+  // só filtra o que já está no celular.
+  // (memorizado: não muda à meia-noite, só quando o período muda)
+  const temConfig = config !== null;
+  const desde = useMemo(
+    () => (temConfig ? inicioDoHistorico(periodo.inicio) : null),
+    [temConfig, periodo.inicio]
+  );
   useEffect(() => {
-    if (!hubId) return;
-    getTariff(hubId).then(setTariff);
-  }, [hubId]);
+    if (!hubId || desde === null) return;
+    return subscribeToReadingsSince(hubId, desde, setReadings);
+  }, [hubId, desde]);
+
+  const profileReadings = useMemo(() => {
+    const inicio = startOfDaysAgoMs(6);
+    return readings.filter((r) => r.timestamp >= inicio);
+  }, [readings]);
 
   const kwhData: BarChartDatum[] = useMemo(() => {
     if (period === 'today') {
@@ -92,13 +104,13 @@ function ChartsConteudo({
       }));
     }
 
-    const days = period === 'week' ? buildDayList(7) : daysInCurrentMonthSoFar();
+    const days = period === 'week' ? buildDayList(7) : daysSince(periodo.inicio);
     const values = bucketKwhByDay(readings, days);
     return days.map((day, i) => ({
       label: period === 'week' ? WEEKDAY_LABELS[day.getDay()] : String(day.getDate()),
       value: values[i],
     }));
-  }, [readings, period]);
+  }, [readings, period, periodo.inicio]);
 
   const costData: BarChartDatum[] = useMemo(
     () => kwhData.map((d) => ({ label: d.label, value: d.value * tariff })),
@@ -145,7 +157,9 @@ function ChartsConteudo({
               onPress={() => setPeriod(p.id)}
               style={[styles.periodButton, period === p.id && styles.periodButtonActive]}
             >
-              <Text style={[styles.periodText, period === p.id && styles.periodTextActive]}>{p.label}</Text>
+              <Text style={[styles.periodText, period === p.id && styles.periodTextActive]}>
+                {p.id === 'month' && ciclo ? 'Ciclo' : p.label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -156,7 +170,13 @@ function ChartsConteudo({
             <Text style={styles.sectionValue}>{totalKwh.toFixed(1)} kWh</Text>
           </View>
           <Text style={styles.sectionSubtitle}>
-            {period === 'today' ? 'Por hora, hoje' : period === 'week' ? 'Por dia, últimos 7 dias' : 'Por dia, este mês'}
+            {period === 'today'
+              ? 'Por hora, hoje'
+              : period === 'week'
+                ? 'Por dia, últimos 7 dias'
+                : ciclo
+                  ? `Por dia, ciclo de ${diaMes(periodo.inicio)} a ${diaMes(periodo.fim)}`
+                  : 'Por dia, este mês'}
           </Text>
           <BarChart data={kwhData} valueFormatter={(v) => v.toFixed(1)} />
         </View>

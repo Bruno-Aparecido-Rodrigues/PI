@@ -1,10 +1,11 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, Pressable, ToastAndroid, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { useHubStatus } from '../../hooks/useHubStatus';
 import { SemInternetAviso } from '../SemInternetAviso';
+import { alternarAprendizado } from '../../services/alertsData';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
 
@@ -15,13 +16,36 @@ export function AppHeader() {
   const { hubId } = useCurrentHub();
   const { online } = useHubStatus(hubId);
 
+  // Atalho escondido pra apresentação: 7 toques seguidos no "A.C.D.C" ligam
+  // ou desligam o período de aprendizado dos alertas (ver alertsData.ts).
+  // Nada no visual indica que dá pra tocar aí.
+  const toques = useRef({ n: 0, ultimo: 0 });
+  async function tocarNaMarca() {
+    const agora = Date.now();
+    const t = toques.current;
+    t.n = agora - t.ultimo < 1500 ? t.n + 1 : 1;
+    t.ultimo = agora;
+    if (t.n < 7 || !hubId) return;
+    t.n = 0;
+    try {
+      const r = await alternarAprendizado(hubId);
+      avisar(
+        r === 'encerrado'
+          ? 'Modo de teste: alertas de consumo ativados (vale na próxima rodada, até 5 min).'
+          : 'Período de aprendizado reiniciado: 30 dias sem alertas de consumo.'
+      );
+    } catch {
+      avisar('Não foi possível mudar o modo de teste.');
+    }
+  }
+
   return (
     <View>
     <View style={[styles.container, { paddingTop: insets.top + 10 }]}>
-      <View style={styles.left}>
+      <Pressable style={styles.left} onPress={tocarNaMarca}>
         <MaterialIcons name="bolt" size={22} color={colors.primary} />
         <Text style={styles.brandText}>A.C.D.C</Text>
-      </View>
+      </Pressable>
 
       <View style={styles.right}>
         {hubId && (
@@ -37,4 +61,8 @@ export function AppHeader() {
     <SemInternetAviso />
     </View>
   );
+}
+
+function avisar(texto: string) {
+  if (Platform.OS === 'android') ToastAndroid.show(texto, ToastAndroid.LONG);
 }

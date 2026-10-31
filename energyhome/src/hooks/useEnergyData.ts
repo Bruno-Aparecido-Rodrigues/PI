@@ -5,11 +5,12 @@ import {
   integrateEnergy,
   averageWattsAtHour,
   startOfTodayMs,
-  startOfMonthMs,
   startOfDaysAgoMs,
+  inicioDoHistorico,
   PowerReading,
 } from '../services/energyData';
 import { calcularContaDoMes } from '../services/contaMes';
+import { periodoAtual } from '../services/ciclo';
 import { atualizarWidgetConta } from '../widget/atualizarWidget';
 import {
   ConfigTarifa,
@@ -64,22 +65,42 @@ export function useEnergyData(hubId: string | null) {
       }
     };
 
-    // Uma única assinatura cobre tudo que o Dashboard precisa: o mês atual
-    // (kWh do mês, conta, pico) e os últimos 7 dias (consumo normal por
-    // horário). Hoje está contido nos dois. Dela, filtramos cada recorte.
-    const since = Math.min(startOfMonthMs(), startOfDaysAgoMs(TREND_HISTORY_DAYS));
-
     const unsubscribeCurrent = subscribeToCurrentPower(hubId, handleCurrentPower);
-    const unsubscribeReadings = subscribeToReadingsSince(hubId, since, setReadings);
-    // Tarifa, impostos e iluminação pública (atualiza na hora se mudar em Ajustes)
+    // Tarifa, impostos, iluminação pública e ciclo da conta (atualiza na hora
+    // se mudar em Ajustes)
     const unsubscribeTarifa = subscribeToConfigTarifa(hubId, setConfigTarifa);
 
     return () => {
       unsubscribeCurrent();
-      unsubscribeReadings();
       unsubscribeTarifa();
     };
   }, [hubId]);
+
+  // Período da conta: ciclo de leitura informado em Ajustes, ou o mês do
+  // calendário (ver services/ciclo.ts). Recalculado a cada render (é barato),
+  // pra virar de ciclo sozinho com o app aberto.
+  const ciclo = configTarifa?.ciclo ?? null;
+  const periodo = periodoAtual(ciclo);
+
+  // Uma única assinatura cobre tudo que o Dashboard precisa: o período da
+  // conta (kWh, conta, pico) e os últimos 7 dias (consumo normal por
+  // horário). Hoje está contido nos dois. Dela, filtramos cada recorte.
+  // Só assina depois de saber o ciclo, e o início só muda quando o ciclo
+  // muda (não à meia-noite), pra não baixar o histórico de novo à toa.
+  const cicloChave = ciclo ? `${ciclo.ultimaLeitura}-${ciclo.proximaLeitura}` : 'mes';
+  const desde = useMemo(
+    () => (configTarifa ? inicioDoHistorico(periodo.inicio) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [configTarifa !== null, cicloChave, periodo.inicio]
+  );
+
+  useEffect(() => {
+    if (!hubId || desde === null) {
+      setReadings([]);
+      return;
+    }
+    return subscribeToReadingsSince(hubId, desde, setReadings);
+  }, [hubId, desde]);
 
   // Modo automático: se os dados da ANEEL tiverem mais de 1 dia (ou a
   // bandeira for de outro mês), busca de novo em segundo plano. Se a ANEEL
@@ -103,7 +124,7 @@ export function useEnergyData(hubId: string | null) {
   // não a cada atualização do /current (~3s).
   const energy = useMemo(() => {
     const todayStart = startOfTodayMs();
-    const monthStart = startOfMonthMs();
+    const monthStart = periodo.inicio;
     const trendStart = startOfDaysAgoMs(TREND_HISTORY_DAYS);
 
     const todayReadings = readings.filter((r) => r.timestamp >= todayStart);
@@ -124,7 +145,7 @@ export function useEnergyData(hubId: string | null) {
       peakWatts,
       pastDaysReadings,
     };
-  }, [readings]);
+  }, [readings, periodo.inicio]);
 
   const typicalWattsNow = useMemo(
     () => averageWattsAtHour(energy.pastDaysReadings, new Date().getHours()),
@@ -134,7 +155,7 @@ export function useEnergyData(hubId: string | null) {
 
   const { trend, trendLabel } = describeTrend(currentWatts, typicalWattsNow);
 
-  const conta = calcularContaDoMes(energy.monthKwh, energy.monthCoveredMs, tariff, cip);
+  const conta = calcularContaDoMes(energy.monthKwh, energy.monthCoveredMs, tariff, cip, Date.now(), periodo.fim);
   const estimatedBill = conta.estimada;
   const projectedBill = conta.projetada;
   const bandeira = configTarifa?.modo === 'aneel' ? configTarifa.aneel?.bandeira ?? null : null;
@@ -152,8 +173,10 @@ export function useEnergyData(hubId: string | null) {
       tariff,
       cip,
       bandeira,
+      periodoInicio: periodo.inicio,
+      periodoFim: periodo.fim,
     });
-  }, [hubId, configTarifa, energy, tariff, cip, bandeira]);
+  }, [hubId, configTarifa, energy, tariff, cip, bandeira, periodo.inicio, periodo.fim]);
 
   return {
     currentWatts,
@@ -168,6 +191,7 @@ export function useEnergyData(hubId: string | null) {
     peakWatts: energy.peakWatts,
     trend,
     trendLabel,
+    periodo,
   };
 }
 

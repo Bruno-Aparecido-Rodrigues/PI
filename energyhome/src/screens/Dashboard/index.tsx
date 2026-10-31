@@ -9,6 +9,7 @@ import { useEnergyData } from '../../hooks/useEnergyData';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { useHubStatus } from '../../hooks/useHubStatus';
 import { rotuloBandeira } from '../../services/contaMes';
+import { diaMes } from '../../services/ciclo';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
 import { useRecarregar } from '../../hooks/useRecarregar';
@@ -36,6 +37,7 @@ function DashboardConteudo({
     peakWatts,
     trend,
     trendLabel,
+    periodo,
   } = useEnergyData(hubId);
   // Hub sem mandar leitura (desligado, sem energia ou sem Wi-Fi): o card ao
   // vivo mostra o aviso em vez do último valor, que já não vale mais.
@@ -66,6 +68,13 @@ function DashboardConteudo({
     projectedBill !== null && projectedBill > 0 ? Math.min(100, (estimatedBill / projectedBill) * 100) : 0;
   const projectedValue =
     projectedBill !== null ? `R$ ${projectedBill.toFixed(2).replace('.', ',')}` : 'após 24h de medição';
+  // Com o ciclo da conta informado em Ajustes, a conta vai da última leitura
+  // até a próxima; senão, é o mês do calendário.
+  const ciclo = periodo.tipo === 'ciclo';
+  const cicloLabel = ciclo ? `Ciclo ${diaMes(periodo.inicio)} a ${diaMes(periodo.fim)} · ` : '';
+  const projectedLabel = ciclo
+    ? `Projetado até ${diaMes(periodo.fim)}${periodo.estimado ? ' (estimado)' : ''}`
+    : 'Projetado';
 
   return (
     <View style={styles.screen}>
@@ -91,9 +100,11 @@ function DashboardConteudo({
           currentValue={estimatedBill.toFixed(2).replace('.', ',')}
           projectedValue={projectedValue}
           billingCycleLabel={
+            cicloLabel +
             `Tarifa: R$ ${tariff.toFixed(2).replace('.', ',')}/kWh` +
             (rotuloBandeira(bandeira) ? ` · ${rotuloBandeira(bandeira)}` : '')
           }
+          projectedLabel={projectedLabel}
           progressPercent={progressPercent}
           onViewForecast={() => navigation.navigate('Charts')}
         />
@@ -111,7 +122,7 @@ function DashboardConteudo({
             icon="calendar-month"
             iconBackground={colors.primaryFixed}
             iconColor={colors.onPrimaryFixed}
-            label="Este Mês"
+            label={ciclo ? 'Este Ciclo' : 'Este Mês'}
             value={monthKwh.toFixed(1)}
             unit="kWh"
           />

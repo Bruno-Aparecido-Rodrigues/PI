@@ -36,6 +36,8 @@ export function atualizarWidgetConta(dados: {
   tariff: number;
   cip: number;
   bandeira: string | null;
+  periodoInicio: number;
+  periodoFim: number;
 }) {
   if (Platform.OS !== 'android') return;
   const agora = Date.now();

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Modal, Pressable } from 'reac
 import { MaterialIcons } from '@expo/vector-icons';
 import { AppHeader } from '../../components/AppHeader';
 import { AlertCard } from '../../components/AlertCard';
-import { subscribeToAlerts, markAlertAsRead, Alert } from '../../services/alertsData';
+import { subscribeToAlerts, subscribeToAprendizado, markAlertAsRead, Alert } from '../../services/alertsData';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
@@ -94,6 +94,14 @@ function AlertsConteudo({
     return unsubscribe;
   }, [hubId]);
 
+  // Período de aprendizado (30 dias): sem alertas de consumo até essa data
+  const [aprendizadoAte, setAprendizadoAte] = useState<number | null>(null);
+  React.useEffect(() => {
+    if (!hubId) return;
+    return subscribeToAprendizado(hubId, setAprendizadoAte);
+  }, [hubId]);
+  const aprendendo = aprendizadoAte !== null && Date.now() < aprendizadoAte;
+
   const filteredAlerts = useMemo(() => {
     const byDate = filterByDate(alerts, periodFilter);
     return filterByStatus(byDate, statusFilter);
@@ -132,6 +140,22 @@ function AlertsConteudo({
           <Text style={styles.title}>Histórico de Alertas</Text>
           <Text style={styles.subtitle}>Revise cronologicamente as anomalias de energia e notificações do sistema.</Text>
         </View>
+
+        {aprendendo ? (
+          <View style={styles.aprendizadoCard}>
+            <MaterialIcons name="school" size={20} color={colors.primary} />
+            <View style={styles.aprendizadoTextos}>
+              <Text style={styles.aprendizadoTitulo}>
+                Aprendendo o consumo da casa até{' '}
+                {new Date(aprendizadoAte!).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+              </Text>
+              <Text style={styles.aprendizadoTexto}>
+                No primeiro mês o app só observa os horários e os picos normais da casa, sem avisos de consumo.
+                Avisos de hub desconectado continuam chegando.
+              </Text>
+            </View>
+          </View>
+        ) : null}
 
         <TouchableOpacity style={styles.filterButton} onPress={() => setFilterModalVisible(true)}>
           <MaterialIcons name="filter-list" size={18} color={colors.onSurface} />

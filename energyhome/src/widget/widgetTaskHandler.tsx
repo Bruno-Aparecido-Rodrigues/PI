@@ -5,8 +5,9 @@ import { getDatabase, ref, get, query, orderByChild, startAt } from 'firebase/da
 import type { User } from 'firebase/auth';
 import { subscribeToAuthChanges } from '../services/authIntegration';
 import { getUserHubs } from '../services/hubPairing';
-import { integrateEnergy, startOfMonthMs, PowerReading } from '../services/energyData';
+import { integrateEnergy, PowerReading } from '../services/energyData';
 import { configDeSettings } from '../services/tarifa';
+import { periodoAtual } from '../services/ciclo';
 import { ContaWidget } from './ContaWidget';
 import { NOME_WIDGET, ACAO_ATUALIZAR, EstadoWidget } from './tipos';
 import { lerCache, salvarCache, estadoDoCache, competenciaDe, CacheConta } from './cacheConta';
@@ -93,11 +94,13 @@ async function calcularEstado(): Promise<EstadoWidget> {
   const db = getDatabase(getApp());
   const config = configDeSettings((await get(ref(db, `hubs/${hubId}/settings`))).val());
 
-  // Continua do cache se for do mesmo hub e do mesmo mês; senão soma o mês todo
+  // Continua do cache se for do mesmo hub e do mesmo período da conta (ciclo
+  // ou mês); senão soma o período todo
   const agora = Date.now();
   const competencia = competenciaDe(agora);
+  const periodo = periodoAtual(config.ciclo, agora);
   const cache = await lerCache();
-  const base = cache && cache.hubId === hubId && cache.competencia === competencia ? cache : null;
+  const base = cache && cache.hubId === hubId && cache.periodoInicio === periodo.inicio ? cache : null;
 
   let monthKwh = 0;
   let coveredMs = 0;
@@ -110,7 +113,7 @@ async function calcularEstado(): Promise<EstadoWidget> {
     coveredMs = base.coveredMs + parcial.coveredMs;
     ultimaLeitura = novas.length ? novas[novas.length - 1] : ponto;
   } else {
-    const doMes = await lerLeiturasDesde(hubId, startOfMonthMs());
+    const doMes = await lerLeiturasDesde(hubId, periodo.inicio);
     const total = integrateEnergy(doMes);
     monthKwh = total.kwh;
     coveredMs = total.coveredMs;
@@ -120,6 +123,8 @@ async function calcularEstado(): Promise<EstadoWidget> {
   const novo: CacheConta = {
     hubId,
     competencia,
+    periodoInicio: periodo.inicio,
+    periodoFim: periodo.fim,
     monthKwh,
     coveredMs,
     ultimaLeitura,

@@ -1,5 +1,6 @@
 import { getDatabase, ref, onValue, update } from 'firebase/database';
 import { app } from './authIntegration';
+import { CicloConfig, cicloDeSettings } from './ciclo';
 
 const db = getDatabase(app);
 
@@ -59,6 +60,7 @@ export interface ConfigTarifa {
   pisCofins: number;            // % (PIS + COFINS somados)
   cip: number;                  // R$/mês (iluminação pública)
   aneel: DadosAneel | null;
+  ciclo: CicloConfig | null;    // datas de leitura da conta (ver services/ciclo.ts)
 }
 
 // ─── Firebase ────────────────────────────────────────────────────────────
@@ -90,6 +92,7 @@ export function configDeSettings(s: any): ConfigTarifa {
             atualizadoEm: lerNumero(a.atualizadoEm, 0),
           }
         : null,
+    ciclo: cicloDeSettings(s?.ciclo),
   };
 }
 
@@ -98,6 +101,11 @@ export function subscribeToConfigTarifa(hubId: string, callback: (config: Config
   return onValue(ref(db, `hubs/${hubId}/settings`), (snapshot) => {
     callback(configDeSettings(snapshot.val()));
   });
+}
+
+/** Grava (ou apaga, com null) as datas de leitura da conta. */
+export async function salvarCiclo(hubId: string, ciclo: CicloConfig | null): Promise<void> {
+  await update(ref(db, `hubs/${hubId}/settings`), { ciclo });
 }
 
 /** Grava campos da configuração (só o que for passado). */

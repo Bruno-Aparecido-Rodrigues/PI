@@ -8,6 +8,8 @@ interface BillEstimateCardProps {
   currentValue: string;
   projectedValue: string;
   billingCycleLabel: string;
+  /** Ex.: "Projetado até 23/11" (padrão: "Projetado") */
+  projectedLabel?: string;
   progressPercent: number;
   onViewForecast?: () => void;
 }
@@ -16,6 +18,7 @@ export function BillEstimateCard({
   currentValue,
   projectedValue,
   billingCycleLabel,
+  projectedLabel = 'Projetado',
   progressPercent,
   onViewForecast,
 }: BillEstimateCardProps) {
@@ -35,7 +38,7 @@ export function BillEstimateCard({
       <Text style={styles.cycleLabel}>{billingCycleLabel}</Text>
 
       <View style={styles.projectedRow}>
-        <Text style={styles.projectedLabel}>Projetado</Text>
+        <Text style={styles.projectedLabel}>{projectedLabel}</Text>
         <Text style={styles.projectedValue}>{projectedValue}</Text>
       </View>
       <View style={styles.progressTrack}>
