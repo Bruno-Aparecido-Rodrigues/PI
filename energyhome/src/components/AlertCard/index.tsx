@@ -9,16 +9,18 @@ interface AlertCardProps {
   time: string;
   description: string;
   read: boolean;
+  /** Ícone do MaterialIcons (padrão: raio) */
+  icone?: string;
   onPress?: () => void;
 }
 
-export function AlertCard({ title, time, description, read, onPress }: AlertCardProps) {
+export function AlertCard({ title, time, description, read, icone = 'bolt', onPress }: AlertCardProps) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
   return (
     <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
       <View style={[styles.iconCircle, read ? styles.iconCircleRead : styles.iconCircleUnread]}>
-        <MaterialIcons name="bolt" size={20} color={read ? colors.onSurfaceVariant : colors.primary} />
+        <MaterialIcons name={icone as any} size={20} color={read ? colors.onSurfaceVariant : colors.primary} />
       </View>
       <View style={styles.content}>
         <View style={styles.headerRow}>

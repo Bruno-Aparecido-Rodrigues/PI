@@ -10,6 +10,7 @@ import {
   FlatList,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ConfigTarifa,
   subscribeToConfigTarifa,
@@ -99,6 +100,8 @@ function nomeCurtoBandeira(nome: string | null): string {
 export function TarifaCard({ hubId }: TarifaCardProps) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  // Margem da barra de navegação do celular no seletor de distribuidora
+  const insets = useSafeAreaInsets();
   const [config, setConfig] = useState<ConfigTarifa | null>(null);
 
   // Campos editáveis (texto, pra aceitar vírgula enquanto digita)
@@ -443,7 +446,7 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
 
       <Modal visible={seletorAberto} animationType="slide" transparent onRequestClose={() => setSeletorAberto(false)}>
         <View style={styles.modalFundo}>
-          <View style={styles.modalCaixa}>
+          <View style={[styles.modalCaixa, { paddingBottom: 16 + insets.bottom }]}>
             <View style={styles.modalTopo}>
               <Text style={styles.cardTitle}>Distribuidora</Text>
               <TouchableOpacity onPress={() => setSeletorAberto(false)}>

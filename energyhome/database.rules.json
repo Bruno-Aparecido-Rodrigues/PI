@@ -46,6 +46,9 @@
             "energyKwh": {
               ".validate": "newData.isNumber() && newData.val() >= 0"
             },
+            "simulado": {
+              ".validate": "newData.isBoolean()"
+            },
             "timestamp": {
               ".validate": "newData.isNumber()"
             },
@@ -69,12 +72,19 @@
             "read": {
               ".validate": "newData.isBoolean()"
             },
+            "detalhe": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
             "$other": {
               ".validate": false
             }
           }
         },
-        "settings": {
+        "aprendizadoAte": {
+        ".write": "auth != null && root.child('hubs').child($hubId).child('owners').child(auth.uid).exists()",
+        ".validate": "newData.isNumber()"
+      },
+      "settings": {
           ".write": "auth != null && root.child('hubs').child($hubId).child('owners').child(auth.uid).exists() || (!newData.exists() && auth != null && newData.parent().child('owners').child(auth.uid).exists() && data.parent().child('unclaimedAt').isNumber() && data.parent().child('unclaimedAt').val() < now - 15552000000)",
           "tariff": {
             ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100"
@@ -93,6 +103,18 @@
           },
           "cip": {
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+          },
+          "ciclo": {
+            ".validate": "newData.hasChildren(['ultimaLeitura', 'proximaLeitura']) && newData.child('proximaLeitura').val() > newData.child('ultimaLeitura').val()",
+            "ultimaLeitura": {
+              ".validate": "newData.isNumber()"
+            },
+            "proximaLeitura": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
           },
           "aneel": {
             ".validate": "newData.hasChildren(['tarifaKwh', 'atualizadoEm'])",

@@ -11,7 +11,8 @@ const db = getDatabase(app);
 //    {
 //      templateId: string,   // chave de src/constants/alertMessages.ts
 //      timestamp: number,    // ms desde 1970
-//      read: boolean         // se o usuário já visualizou
+//      read: boolean,        // se o usuário já visualizou
+//      detalhe?: string      // texto da notificação, com os números do momento
 //    }
 //
 // Quem grava aqui é o ESP32 (ou uma Cloud Function que analisa as leituras)
@@ -25,6 +26,12 @@ export interface Alert {
   description: string;
   timestamp: number;
   read: boolean;
+  /** Texto da notificação (com os números do momento). Alertas antigos não têm. */
+  detalhe: string | null;
+  /** O que a pessoa pode fazer a respeito */
+  oQueFazer: string;
+  /** Ícone do MaterialIcons */
+  icone: string;
 }
 
 /** Observa todos os alertas de um hub em tempo real, do mais recente pro mais antigo. */
@@ -43,6 +50,9 @@ export function subscribeToAlerts(hubId: string, callback: (alerts: Alert[]) => 
           description: template.description,
           timestamp: value.timestamp,
           read: Boolean(value.read),
+          detalhe: typeof value?.detalhe === 'string' && value.detalhe ? value.detalhe : null,
+          oQueFazer: template.oQueFazer,
+          icone: template.icone,
         });
       }
     });

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/AppHeader';
 import { AlertCard } from '../../components/AlertCard';
 import { subscribeToAlerts, subscribeToAprendizado, markAlertAsRead, Alert } from '../../services/alertsData';
@@ -82,11 +83,17 @@ function AlertsConteudo({
 }: { navigation: any } & { refreshControl: React.ReactElement<any> }) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  // Margem dos botões/gestos do Android, pra o "Entendi" e o "Aplicar" não
+  // ficarem embaixo da barra de navegação do celular
+  const insets = useSafeAreaInsets();
+  const margemBaixo = { paddingBottom: 20 + insets.bottom };
   const { hubId, loading: hubLoading } = useCurrentHub();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilterId>('7d');
   const [statusFilter, setStatusFilter] = useState<StatusFilterId>('all');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
+  // Alerta aberto em detalhe (tocar no card abre e marca como visto)
+  const [aberto, setAberto] = useState<Alert | null>(null);
 
   React.useEffect(() => {
     if (!hubId) return;
@@ -102,15 +109,23 @@ function AlertsConteudo({
   }, [hubId]);
   const aprendendo = aprendizadoAte !== null && Date.now() < aprendizadoAte;
 
-  const filteredAlerts = useMemo(() => {
-    const byDate = filterByDate(alerts, periodFilter);
-    return filterByStatus(byDate, statusFilter);
-  }, [alerts, periodFilter, statusFilter]);
+  const doPeriodo = useMemo(() => filterByDate(alerts, periodFilter), [alerts, periodFilter]);
+  const filteredAlerts = useMemo(() => filterByStatus(doPeriodo, statusFilter), [doPeriodo, statusFilter]);
 
   const groups = useMemo(() => groupByDay(filteredAlerts), [filteredAlerts]);
 
-  const unreadCount = filteredAlerts.filter((a) => !a.read).length;
-  const readCount = filteredAlerts.length - unreadCount;
+  // Contagem do período inteiro (não muda ao filtrar por status, senão um dos
+  // cards sempre mostraria 0)
+  const unreadCount = doPeriodo.filter((a) => !a.read).length;
+  const readCount = doPeriodo.length - unreadCount;
+
+  // Tocar num card de resumo filtra por ele; tocar de novo volta pra "Todos"
+  const alternarStatus = (status: StatusFilterId) => setStatusFilter((atual) => (atual === status ? 'all' : status));
+
+  const abrirAlerta = (alert: Alert) => {
+    setAberto(alert);
+    if (!alert.read && hubId) markAlertAsRead(hubId, alert.id);
+  };
 
   const periodLabel = PERIOD_FILTERS.find((f) => f.id === periodFilter)?.label;
   const statusLabel = STATUS_FILTERS.find((f) => f.id === statusFilter)?.label;
@@ -164,20 +179,30 @@ function AlertsConteudo({
         </TouchableOpacity>
 
         <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
+          <TouchableOpacity
+            style={[styles.summaryCard, statusFilter === 'unread' && styles.summaryCardActive]}
+            onPress={() => alternarStatus('unread')}
+            activeOpacity={0.7}
+          >
             <View style={styles.summaryHeader}>
               <MaterialIcons name="mark-email-unread" size={18} color={colors.primary} />
               <Text style={styles.summaryLabel}>Não Visualizados</Text>
             </View>
             <Text style={styles.summaryValue}>{unreadCount}</Text>
-          </View>
-          <View style={styles.summaryCard}>
+            {statusFilter === 'unread' ? <Text style={styles.summaryFiltro}>Filtrando · toque pra limpar</Text> : null}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.summaryCard, statusFilter === 'read' && styles.summaryCardActive]}
+            onPress={() => alternarStatus('read')}
+            activeOpacity={0.7}
+          >
             <View style={styles.summaryHeader}>
               <MaterialIcons name="mark-email-read" size={18} color={colors.onSurfaceVariant} />
               <Text style={styles.summaryLabel}>Visualizados</Text>
             </View>
             <Text style={[styles.summaryValue, styles.summaryValueMuted]}>{readCount}</Text>
-          </View>
+            {statusFilter === 'read' ? <Text style={styles.summaryFiltro}>Filtrando · toque pra limpar</Text> : null}
+          </TouchableOpacity>
         </View>
 
         {groups.length === 0 ? (
@@ -196,13 +221,53 @@ function AlertsConteudo({
                     minute: '2-digit',
                   })}
                   read={alert.read}
-                  onPress={() => !alert.read && hubId && markAlertAsRead(hubId, alert.id)}
+                  icone={alert.icone}
+                  onPress={() => abrirAlerta(alert)}
                 />
               ))}
             </View>
           ))
         )}
       </ScrollView>
+
+      {/* Detalhe do alerta: o mesmo texto da notificação + o que fazer */}
+      <Modal visible={aberto !== null} transparent animationType="fade" onRequestClose={() => setAberto(null)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setAberto(null)}>
+          <Pressable style={[styles.modalCard, margemBaixo]} onPress={(e) => e.stopPropagation()}>
+            {aberto ? (
+              <>
+                <View style={styles.detalheTopo}>
+                  <View style={styles.detalheIcone}>
+                    <MaterialIcons name={aberto.icone as any} size={24} color={colors.primary} />
+                  </View>
+                  <View style={styles.detalheTitulos}>
+                    <Text style={[styles.modalTitle, { marginBottom: 0 }]}>{aberto.title}</Text>
+                    <Text style={styles.detalheData}>
+                      {new Date(aberto.timestamp).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                      })}{' '}
+                      às{' '}
+                      {new Date(aberto.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.modalSectionLabel}>O que aconteceu</Text>
+                <Text style={styles.detalheTexto}>{aberto.detalhe ?? aberto.description}</Text>
+
+                <Text style={styles.modalSectionLabel}>O que fazer</Text>
+                <Text style={styles.detalheTexto}>{aberto.oQueFazer}</Text>
+
+                <TouchableOpacity style={styles.modalCloseButton} onPress={() => setAberto(null)}>
+                  <Text style={styles.modalCloseButtonText}>Entendi</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <Modal
         visible={filterModalVisible}
@@ -211,7 +276,7 @@ function AlertsConteudo({
         onRequestClose={() => setFilterModalVisible(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setFilterModalVisible(false)}>
-          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+          <Pressable style={[styles.modalCard, margemBaixo]} onPress={(e) => e.stopPropagation()}>
             <Text style={styles.modalTitle}>Filtrar alertas</Text>
 
             <Text style={styles.modalSectionLabel}>Período</Text>

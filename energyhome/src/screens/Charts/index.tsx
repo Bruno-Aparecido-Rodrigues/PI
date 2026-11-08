@@ -190,7 +190,7 @@ function ChartsConteudo({
           <BarChart
             data={costData}
             barColor={colors.tertiary}
-            valueFormatter={(v) => v.toFixed(1)}
+            valueFormatter={(v) => `R$${v.toFixed(v < 10 ? 2 : 1).replace('.', ',')}`}
           />
         </View>
 

@@ -135,6 +135,41 @@ export const criarEstilos = (colors: AppColors) =>
   summaryValueMuted: {
     color: colors.onSurface,
   },
+  summaryCardActive: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+  },
+  summaryFiltro: {
+    fontSize: 11,
+    color: colors.primary,
+    marginTop: 2,
+  },
+  detalheTopo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  detalheIcone: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceContainerLow,
+  },
+  detalheTitulos: {
+    flex: 1,
+    gap: 2,
+  },
+  detalheData: {
+    fontSize: 13,
+    color: colors.onSurfaceVariant,
+  },
+  detalheTexto: {
+    fontSize: 15,
+    lineHeight: 21,
+    color: colors.onSurface,
+  },
   emptyText: {
     fontSize: 14,
     color: colors.onSurfaceVariant,
