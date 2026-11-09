@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useT } from '../../i18n/IdiomaContext';
+import type { Chave } from '../../i18n';
 
 const ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> = {
   Dashboard: 'dashboard',
@@ -13,17 +15,18 @@ const ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> = {
   Settings: 'settings',
 };
 
-const LABELS: Record<string, string> = {
-  Dashboard: 'Início',
-  Charts: 'Gráficos',
-  Alerts: 'Alertas',
-  Settings: 'Ajustes',
+const LABELS: Record<string, Chave> = {
+  Dashboard: 'nav.inicio',
+  Charts: 'nav.graficos',
+  Alerts: 'nav.alertas',
+  Settings: 'nav.ajustes',
 };
 
 export function BottomNav({ state, navigation }: BottomTabBarProps) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
   const insets = useSafeAreaInsets();
+  const t = useT();
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 10 }]}>
@@ -43,7 +46,7 @@ export function BottomNav({ state, navigation }: BottomTabBarProps) {
               color={isFocused ? colors.onSecondaryFixed : colors.onSurfaceVariant}
             />
             <Text style={[styles.label, isFocused && styles.labelActive]}>
-              {LABELS[route.name] ?? route.name}
+              {LABELS[route.name] ? t(LABELS[route.name]) : route.name}
             </Text>
           </TouchableOpacity>
         );

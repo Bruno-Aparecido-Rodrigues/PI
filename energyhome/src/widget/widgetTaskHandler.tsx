@@ -12,6 +12,7 @@ import { ContaWidget } from './ContaWidget';
 import { NOME_WIDGET, ACAO_ATUALIZAR, EstadoWidget } from './tipos';
 import { lerCache, salvarCache, estadoDoCache, competenciaDe, CacheConta } from './cacheConta';
 import { firebaseConfig } from '../services/firebaseConfig';
+import { carregarIdioma, t } from '../i18n';
 
 // Roda com o app FECHADO: quando o widget é colocado na tela inicial, quando
 // é redimensionado e a cada 30 min (updatePeriodMillis no app.json, o mínimo
@@ -30,6 +31,9 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     props.widgetAction === 'WIDGET_RESIZED' ||
     (props.widgetAction === 'WIDGET_CLICK' && props.clickAction === ACAO_ATUALIZAR);
   if (!atualizarAgora) return;
+
+  // Com o app fechado, o idioma escolhido ainda não foi lido
+  await carregarIdioma();
 
   const desenhar = (estado: EstadoWidget) =>
     props.renderWidget(
@@ -85,11 +89,11 @@ async function lerLeiturasDesde(hubId: string, desde: number): Promise<PowerRead
 async function calcularEstado(): Promise<EstadoWidget> {
   const user = await usuarioLogado();
   if (!user || !user.emailVerified) {
-    return { tipo: 'aviso', mensagem: 'Entre no app A.C.D.C pra ver sua conta.' };
+    return { tipo: 'aviso', mensagem: t('widget.entre') };
   }
 
   const hubId = (await getUserHubs(user.uid))[0];
-  if (!hubId) return { tipo: 'aviso', mensagem: 'Pareie seu hub no app pra ver a conta.' };
+  if (!hubId) return { tipo: 'aviso', mensagem: t('widget.pareie') };
 
   const db = getDatabase(getApp());
   const config = configDeSettings((await get(ref(db, `hubs/${hubId}/settings`))).val());
@@ -157,7 +161,7 @@ async function estadoSemInternet(): Promise<EstadoWidget> {
   const cache = await lerCache();
   return cache
     ? estadoDoCache(cache, Date.now(), { tipo: 'semInternet', em: Date.now() })
-    : { tipo: 'aviso', mensagem: 'Sem conexão com a internet', semInternet: true };
+    : { tipo: 'aviso', mensagem: t('comum.semInternet'), semInternet: true };
 }
 
 /** Sem internet, Firebase lento ou erro: último valor conhecido, avisando que falhou. */
@@ -165,7 +169,7 @@ async function estadoReserva(motivo: string): Promise<EstadoWidget> {
   const cache = await lerCache();
   return cache
     ? estadoDoCache(cache, Date.now(), { tipo: 'falhou', em: Date.now(), motivo })
-    : { tipo: 'aviso', mensagem: 'Sem conexão. Abra o app pra atualizar.' };
+    : { tipo: 'aviso', mensagem: t('widget.semConexao') };
 }
 
 async function comLimite(tarefa: Promise<EstadoWidget>, ms: number): Promise<EstadoWidget> {
@@ -175,7 +179,7 @@ async function comLimite(tarefa: Promise<EstadoWidget>, ms: number): Promise<Est
   });
   try {
     const r = await Promise.race([tarefa, tempo]);
-    return r === 'tempo' ? estadoReserva('sem resposta') : r;
+    return r === 'tempo' ? estadoReserva(t('widget.semResposta')) : r;
   } catch (erro: any) {
     console.warn('Widget: falha ao atualizar a conta:', erro);
     const texto = String(erro?.code ?? erro?.message ?? 'erro');

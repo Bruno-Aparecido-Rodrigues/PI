@@ -20,6 +20,7 @@ import { firebaseConfig } from './firebaseConfig';
 import { signOutFromGoogle } from './googleSignIn';
 import { esquecerTokenPush, registerForPushNotifications } from './pushNotifications';
 import { limparWidgetConta } from '../widget/atualizarWidget';
+import { t, idioma } from '../i18n';
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
 
@@ -37,22 +38,30 @@ export type AuthResult =
 function mapAuthError(code: string): string {
   switch (code) {
     case 'auth/invalid-email':
-      return 'E-mail inválido.';
+      return t('auth.emailInvalido');
     case 'auth/user-not-found':
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
-      return 'E-mail ou senha incorretos.';
+      return t('auth.credenciais');
     case 'auth/email-already-in-use':
-      return 'Já existe uma conta com esse e-mail.';
+      return t('auth.emailEmUso');
     case 'auth/weak-password':
-      return 'A senha precisa ter pelo menos 6 caracteres.';
+      return t('auth.senhaFraca');
     case 'auth/account-exists-with-different-credential':
-      return 'Já existe uma conta com esse e-mail. Entre com e-mail e senha.';
+      return t('auth.outraCredencial');
     case 'auth/network-request-failed':
-      return 'Sem conexão com a internet. Tente novamente.';
+      return t('auth.semInternet');
     default:
-      return 'Não foi possível concluir a operação. Tente novamente.';
+      return t('auth.generico');
   }
+}
+
+/**
+ * E-mails do Firebase (confirmação e redefinição de senha) no idioma do app.
+ * null = idioma padrão do projeto no Console do Firebase (português).
+ */
+function idiomaDosEmails() {
+  auth.languageCode = idioma() === 'en' ? 'en' : null;
 }
 
 export async function login(email: string, password: string): Promise<AuthResult> {
@@ -63,7 +72,7 @@ export async function login(email: string, password: string): Promise<AuthResult
       await firebaseSignOut(auth);
       return {
         success: false,
-        message: 'Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada (e o spam).',
+        message: t('auth.confirmeEmail'),
       };
     }
 
@@ -80,6 +89,7 @@ export async function register(email: string, password: string, name?: string): 
       await updateProfile(credential.user, { displayName: name });
     }
 
+    idiomaDosEmails();
     await sendEmailVerification(credential.user);
 
     // Não deixa a pessoa entrar direto sem confirmar o e-mail — desloga
@@ -125,6 +135,7 @@ export function getCurrentUser(): User | null {
 
 export async function resetPassword(email: string): Promise<AuthResult> {
   try {
+    idiomaDosEmails();
     await sendPasswordResetEmail(auth, email);
     return { success: true, user: { uid: '', email } as User };
   } catch (error: any) {
@@ -135,7 +146,7 @@ export async function resetPassword(email: string): Promise<AuthResult> {
 export async function deleteAccount(): Promise<AuthResult> {
   const user = auth.currentUser;
   if (!user) {
-    return { success: false, message: 'Nenhum usuário autenticado.' };
+    return { success: false, message: t('auth.semUsuario') };
   }
 
   try {
@@ -149,7 +160,7 @@ export async function deleteAccount(): Promise<AuthResult> {
     if (error?.code === 'auth/requires-recent-login') {
       return {
         success: false,
-        message: 'Por segurança, saia e faça login novamente antes de excluir sua conta.',
+        message: t('auth.loginRecente'),
       };
     }
     return { success: false, message: mapAuthError(error?.code) };

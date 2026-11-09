@@ -5,6 +5,7 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 import { subscribeToAuthChanges } from './src/services/authIntegration';
 import { registerForPushNotifications } from './src/services/pushNotifications';
 import { TemaProvider, useTema } from './src/theme/TemaContext';
+import { IdiomaProvider } from './src/i18n/IdiomaContext';
 
 // Ícones da barra de status do Android: escuros no tema claro e vice-versa
 function BarraDeStatus() {
@@ -26,8 +27,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <TemaProvider>
-        <BarraDeStatus />
-        <AppNavigator />
+        {/* Idioma (pt/en): escolhido em Ajustes ou o do celular */}
+        <IdiomaProvider>
+          <BarraDeStatus />
+          <AppNavigator />
+        </IdiomaProvider>
       </TemaProvider>
     </SafeAreaProvider>
   );

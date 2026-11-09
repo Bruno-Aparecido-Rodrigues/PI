@@ -4,24 +4,32 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppHeader } from '../../components/AppHeader';
 import { AlertCard } from '../../components/AlertCard';
-import { subscribeToAlerts, subscribeToAprendizado, markAlertAsRead, Alert } from '../../services/alertsData';
+import {
+  subscribeToAlerts,
+  subscribeToAprendizado,
+  markAlertAsRead,
+  textosDoAlerta,
+  Alert,
+} from '../../services/alertsData';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
 import { useRecarregar } from '../../hooks/useRecarregar';
+import { useT } from '../../i18n/IdiomaContext';
+import { Chave, diaMesCurto, diaMesLongo, dataCurta, hora } from '../../i18n';
 
-const PERIOD_FILTERS = [
-  { id: 'today', label: 'Hoje' },
-  { id: '7d', label: '7 dias' },
-  { id: '30d', label: '30 dias' },
-  { id: 'all', label: 'Tudo' },
-] as const;
+const PERIOD_FILTERS: readonly { id: 'today' | '7d' | '30d' | 'all'; label: Chave }[] = [
+  { id: 'today', label: 'comum.hoje' },
+  { id: '7d', label: 'alertas.7dias' },
+  { id: '30d', label: 'alertas.30dias' },
+  { id: 'all', label: 'alertas.tudo' },
+];
 
-const STATUS_FILTERS = [
-  { id: 'all', label: 'Todos' },
-  { id: 'unread', label: 'Não lidos' },
-  { id: 'read', label: 'Lidos' },
-] as const;
+const STATUS_FILTERS: readonly { id: 'all' | 'unread' | 'read'; label: Chave }[] = [
+  { id: 'all', label: 'alertas.todos' },
+  { id: 'unread', label: 'alertas.naoLidos' },
+  { id: 'read', label: 'alertas.lidos' },
+];
 
 type PeriodFilterId = (typeof PERIOD_FILTERS)[number]['id'];
 type StatusFilterId = (typeof STATUS_FILTERS)[number]['id'];
@@ -49,7 +57,7 @@ function filterByStatus(alerts: Alert[], filter: StatusFilterId): Alert[] {
   return alerts.filter((a) => a.read);
 }
 
-function groupByDay(alerts: Alert[]): { label: string; alerts: Alert[] }[] {
+function groupByDay(alerts: Alert[], t: (c: Chave) => string): { label: string; alerts: Alert[] }[] {
   const groups: { label: string; alerts: Alert[] }[] = [];
   const todayLabel = new Date().toDateString();
   const yesterdayLabel = new Date(Date.now() - 86400000).toDateString();
@@ -59,11 +67,11 @@ function groupByDay(alerts: Alert[]): { label: string; alerts: Alert[] }[] {
     const dateLabel = date.toDateString();
     let label: string;
     if (dateLabel === todayLabel) {
-      label = 'Hoje';
+      label = t('comum.hoje');
     } else if (dateLabel === yesterdayLabel) {
-      label = 'Ontem';
+      label = t('comum.ontem');
     } else {
-      label = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' });
+      label = diaMesLongo(alert.timestamp);
     }
 
     const existingGroup = groups.find((g) => g.label === label);
@@ -83,6 +91,7 @@ function AlertsConteudo({
 }: { navigation: any } & { refreshControl: React.ReactElement<any> }) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  const t = useT();
   // Margem dos botões/gestos do Android, pra o "Entendi" e o "Aplicar" não
   // ficarem embaixo da barra de navegação do celular
   const insets = useSafeAreaInsets();
@@ -112,7 +121,7 @@ function AlertsConteudo({
   const doPeriodo = useMemo(() => filterByDate(alerts, periodFilter), [alerts, periodFilter]);
   const filteredAlerts = useMemo(() => filterByStatus(doPeriodo, statusFilter), [doPeriodo, statusFilter]);
 
-  const groups = useMemo(() => groupByDay(filteredAlerts), [filteredAlerts]);
+  const groups = useMemo(() => groupByDay(filteredAlerts, t), [filteredAlerts, t]);
 
   // Contagem do período inteiro (não muda ao filtrar por status, senão um dos
   // cards sempre mostraria 0)
@@ -127,8 +136,8 @@ function AlertsConteudo({
     if (!alert.read && hubId) markAlertAsRead(hubId, alert.id);
   };
 
-  const periodLabel = PERIOD_FILTERS.find((f) => f.id === periodFilter)?.label;
-  const statusLabel = STATUS_FILTERS.find((f) => f.id === statusFilter)?.label;
+  const periodLabel = t(PERIOD_FILTERS.find((f) => f.id === periodFilter)!.label);
+  const statusLabel = t(STATUS_FILTERS.find((f) => f.id === statusFilter)!.label);
   const filterSummary = statusFilter === 'all' ? periodLabel : `${periodLabel} · ${statusLabel}`;
 
   if (!hubLoading && !hubId) {
@@ -137,10 +146,10 @@ function AlertsConteudo({
         <AppHeader />
         <View style={styles.emptyStateFull}>
           <MaterialIcons name="sensors-off" size={48} color={colors.onSurfaceVariant} />
-          <Text style={styles.emptyTitle}>Nenhum dispositivo pareado</Text>
-          <Text style={styles.emptySubtitle}>Adicione um hub pra começar a receber alertas.</Text>
+          <Text style={styles.emptyTitle}>{t('comum.semHubTitulo')}</Text>
+          <Text style={styles.emptySubtitle}>{t('alertas.semHubTexto')}</Text>
           <TouchableOpacity style={styles.emptyButton} onPress={() => navigation.navigate('AddDevice')}>
-            <Text style={styles.emptyButtonText}>Adicionar Dispositivo</Text>
+            <Text style={styles.emptyButtonText}>{t('comum.adicionarDispositivo')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -152,8 +161,8 @@ function AlertsConteudo({
       <AppHeader />
       <ScrollView contentContainerStyle={styles.content} refreshControl={refreshControl}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Histórico de Alertas</Text>
-          <Text style={styles.subtitle}>Revise cronologicamente as anomalias de energia e notificações do sistema.</Text>
+          <Text style={styles.title}>{t('alertas.titulo')}</Text>
+          <Text style={styles.subtitle}>{t('alertas.subtitulo')}</Text>
         </View>
 
         {aprendendo ? (
@@ -161,13 +170,9 @@ function AlertsConteudo({
             <MaterialIcons name="school" size={20} color={colors.primary} />
             <View style={styles.aprendizadoTextos}>
               <Text style={styles.aprendizadoTitulo}>
-                Aprendendo o consumo da casa até{' '}
-                {new Date(aprendizadoAte!).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                {t('alertas.aprendendoAte', { data: diaMesCurto(aprendizadoAte!) })}
               </Text>
-              <Text style={styles.aprendizadoTexto}>
-                No primeiro mês o app só observa os horários e os picos normais da casa, sem avisos de consumo.
-                Avisos de hub desconectado continuam chegando.
-              </Text>
+              <Text style={styles.aprendizadoTexto}>{t('alertas.aprendendoTexto')}</Text>
             </View>
           </View>
         ) : null}
@@ -186,10 +191,10 @@ function AlertsConteudo({
           >
             <View style={styles.summaryHeader}>
               <MaterialIcons name="mark-email-unread" size={18} color={colors.primary} />
-              <Text style={styles.summaryLabel}>Não Visualizados</Text>
+              <Text style={styles.summaryLabel}>{t('alertas.naoVisualizados')}</Text>
             </View>
             <Text style={styles.summaryValue}>{unreadCount}</Text>
-            {statusFilter === 'unread' ? <Text style={styles.summaryFiltro}>Filtrando · toque pra limpar</Text> : null}
+            {statusFilter === 'unread' ? <Text style={styles.summaryFiltro}>{t('alertas.filtrando')}</Text> : null}
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.summaryCard, statusFilter === 'read' && styles.summaryCardActive]}
@@ -198,33 +203,33 @@ function AlertsConteudo({
           >
             <View style={styles.summaryHeader}>
               <MaterialIcons name="mark-email-read" size={18} color={colors.onSurfaceVariant} />
-              <Text style={styles.summaryLabel}>Visualizados</Text>
+              <Text style={styles.summaryLabel}>{t('alertas.visualizados')}</Text>
             </View>
             <Text style={[styles.summaryValue, styles.summaryValueMuted]}>{readCount}</Text>
-            {statusFilter === 'read' ? <Text style={styles.summaryFiltro}>Filtrando · toque pra limpar</Text> : null}
+            {statusFilter === 'read' ? <Text style={styles.summaryFiltro}>{t('alertas.filtrando')}</Text> : null}
           </TouchableOpacity>
         </View>
 
         {groups.length === 0 ? (
-          <Text style={styles.emptyText}>Nenhum alerta neste período.</Text>
+          <Text style={styles.emptyText}>{t('alertas.nenhum')}</Text>
         ) : (
           groups.map((group) => (
             <View key={group.label} style={styles.section}>
               <Text style={styles.dayLabel}>{group.label}</Text>
-              {group.alerts.map((alert) => (
-                <AlertCard
-                  key={alert.id}
-                  title={alert.title}
-                  description={alert.description}
-                  time={new Date(alert.timestamp).toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                  read={alert.read}
-                  icone={alert.icone}
-                  onPress={() => abrirAlerta(alert)}
-                />
-              ))}
+              {group.alerts.map((alert) => {
+                const textos = textosDoAlerta(alert);
+                return (
+                  <AlertCard
+                    key={alert.id}
+                    title={textos.title}
+                    description={textos.description}
+                    time={hora(alert.timestamp)}
+                    read={alert.read}
+                    icone={textos.icone}
+                    onPress={() => abrirAlerta(alert)}
+                  />
+                );
+              })}
             </View>
           ))
         )}
@@ -234,37 +239,34 @@ function AlertsConteudo({
       <Modal visible={aberto !== null} transparent animationType="fade" onRequestClose={() => setAberto(null)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setAberto(null)}>
           <Pressable style={[styles.modalCard, margemBaixo]} onPress={(e) => e.stopPropagation()}>
-            {aberto ? (
+            {aberto ? (() => {
+              const textos = textosDoAlerta(aberto);
+              return (
               <>
                 <View style={styles.detalheTopo}>
                   <View style={styles.detalheIcone}>
-                    <MaterialIcons name={aberto.icone as any} size={24} color={colors.primary} />
+                    <MaterialIcons name={textos.icone as any} size={24} color={colors.primary} />
                   </View>
                   <View style={styles.detalheTitulos}>
-                    <Text style={[styles.modalTitle, { marginBottom: 0 }]}>{aberto.title}</Text>
+                    <Text style={[styles.modalTitle, { marginBottom: 0 }]}>{textos.title}</Text>
                     <Text style={styles.detalheData}>
-                      {new Date(aberto.timestamp).toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                      })}{' '}
-                      às{' '}
-                      {new Date(aberto.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      {t('comum.dataHora', { data: dataCurta(aberto.timestamp), hora: hora(aberto.timestamp) })}
                     </Text>
                   </View>
                 </View>
 
-                <Text style={styles.modalSectionLabel}>O que aconteceu</Text>
-                <Text style={styles.detalheTexto}>{aberto.detalhe ?? aberto.description}</Text>
+                <Text style={styles.modalSectionLabel}>{t('alertas.oQueAconteceu')}</Text>
+                <Text style={styles.detalheTexto}>{textos.detalhe}</Text>
 
-                <Text style={styles.modalSectionLabel}>O que fazer</Text>
-                <Text style={styles.detalheTexto}>{aberto.oQueFazer}</Text>
+                <Text style={styles.modalSectionLabel}>{t('alertas.oQueFazer')}</Text>
+                <Text style={styles.detalheTexto}>{textos.oQueFazer}</Text>
 
                 <TouchableOpacity style={styles.modalCloseButton} onPress={() => setAberto(null)}>
-                  <Text style={styles.modalCloseButtonText}>Entendi</Text>
+                  <Text style={styles.modalCloseButtonText}>{t('alertas.entendi')}</Text>
                 </TouchableOpacity>
               </>
-            ) : null}
+              );
+            })() : null}
           </Pressable>
         </Pressable>
       </Modal>
@@ -277,9 +279,9 @@ function AlertsConteudo({
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setFilterModalVisible(false)}>
           <Pressable style={[styles.modalCard, margemBaixo]} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Filtrar alertas</Text>
+            <Text style={styles.modalTitle}>{t('alertas.filtrar')}</Text>
 
-            <Text style={styles.modalSectionLabel}>Período</Text>
+            <Text style={styles.modalSectionLabel}>{t('alertas.periodo')}</Text>
             <View style={styles.modalChipRow}>
               {PERIOD_FILTERS.map((f) => (
                 <TouchableOpacity
@@ -288,13 +290,13 @@ function AlertsConteudo({
                   style={[styles.filterChip, periodFilter === f.id && styles.filterChipActive]}
                 >
                   <Text style={[styles.filterChipText, periodFilter === f.id && styles.filterChipTextActive]}>
-                    {f.label}
+                    {t(f.label)}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={styles.modalSectionLabel}>Status</Text>
+            <Text style={styles.modalSectionLabel}>{t('alertas.status')}</Text>
             <View style={styles.modalChipRow}>
               {STATUS_FILTERS.map((f) => (
                 <TouchableOpacity
@@ -303,14 +305,14 @@ function AlertsConteudo({
                   style={[styles.filterChip, statusFilter === f.id && styles.filterChipActive]}
                 >
                   <Text style={[styles.filterChipText, statusFilter === f.id && styles.filterChipTextActive]}>
-                    {f.label}
+                    {t(f.label)}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             <TouchableOpacity style={styles.modalCloseButton} onPress={() => setFilterModalVisible(false)}>
-              <Text style={styles.modalCloseButtonText}>Aplicar</Text>
+              <Text style={styles.modalCloseButtonText}>{t('alertas.aplicar')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>

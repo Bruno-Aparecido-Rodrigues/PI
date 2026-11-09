@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { register } from '../../services/authIntegration';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useT } from '../../i18n/IdiomaContext';
 
 interface RegisterScreenProps {
   navigation: any;
@@ -12,6 +13,7 @@ interface RegisterScreenProps {
 export function RegisterScreen({ navigation }: RegisterScreenProps) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  const t = useT();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,12 +27,12 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
     setErrorMessage('');
 
     if (!name || !email || !password || !confirmPassword) {
-      setErrorMessage('Preencha todos os campos para continuar.');
+      setErrorMessage(t('cadastro.preencha'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setErrorMessage('As senhas não conferem.');
+      setErrorMessage(t('cadastro.senhasDiferentes'));
       return;
     }
 
@@ -62,27 +64,24 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
           <View style={styles.logoBox}>
             <MaterialIcons name="bolt" size={26} color={colors.onPrimary} />
           </View>
-          <Text style={styles.title}>Criar Conta</Text>
-          <Text style={styles.subtitle}>Comece a monitorar o consumo da sua casa</Text>
+          <Text style={styles.title}>{t('cadastro.titulo')}</Text>
+          <Text style={styles.subtitle}>{t('cadastro.subtitulo')}</Text>
         </View>
 
         {registered ? ( // tela de email de confirmação
           <View style={styles.form}>
-            <Text style={styles.infoText}>
-              Enviamos um e-mail de confirmação para {email}. Verifique sua caixa de
-              entrada (e o spam) e clique no link antes de fazer login.
-            </Text>
+            <Text style={styles.infoText}>{t('cadastro.emailEnviado', { email })}</Text>
             <TouchableOpacity style={styles.submitButton} onPress={() => navigation.replace('Login')}>
-              <Text style={styles.submitButtonText}>Ir para o Login</Text>
+              <Text style={styles.submitButtonText}>{t('cadastro.irLogin')}</Text>
             </TouchableOpacity>
           </View>
         ) : ( //formulário de registro
           <View style={styles.form}>
             <View style={styles.field}>
-              <Text style={styles.label}>Nome Completo</Text>
+              <Text style={styles.label}>{t('cadastro.nome')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Seu nome"
+                placeholder={t('cadastro.nomePlaceholder')}
                 placeholderTextColor={colors.outline}
                 value={name}
                 onChangeText={setName}
@@ -90,10 +89,10 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>E-mail</Text>
+              <Text style={styles.label}>{t('comum.email')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="nome@empresa.com"
+                placeholder={t('comum.emailPlaceholder')}
                 placeholderTextColor={colors.outline}
                 autoCapitalize="none"
                 keyboardType="email-address"
@@ -103,7 +102,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Senha</Text>
+              <Text style={styles.label}>{t('comum.senha')}</Text>
               <View style={styles.passwordWrapper}>
                 <TextInput
                   style={styles.input}
@@ -127,7 +126,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Confirmar Senha</Text>
+              <Text style={styles.label}>{t('cadastro.confirmarSenha')}</Text>
               <TextInput
                 style={styles.input}
                 placeholder="••••••••"
@@ -144,16 +143,16 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
               {loading ? (
                 <ActivityIndicator color={colors.onPrimary} />
               ) : (
-                <Text style={styles.submitButtonText}>Criar Conta</Text>
+                <Text style={styles.submitButtonText}>{t('cadastro.titulo')}</Text>
               )}
             </TouchableOpacity>
           </View>
         )}
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Já tem uma conta? </Text>
+          <Text style={styles.footerText}>{t('cadastro.jaTem')}</Text>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.footerLink}>Fazer Login</Text>
+            <Text style={styles.footerLink}>{t('cadastro.fazerLogin')}</Text>
           </TouchableOpacity>
         </View>
       </View>

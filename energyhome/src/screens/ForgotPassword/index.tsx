@@ -4,6 +4,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { resetPassword } from '../../services/authIntegration';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useT } from '../../i18n/IdiomaContext';
 
 interface ForgotPasswordScreenProps {
   navigation: any;
@@ -12,6 +13,7 @@ interface ForgotPasswordScreenProps {
 export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  const t = useT();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -22,7 +24,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
     setInfoMessage('');
 
     if (!email) {
-      setErrorMessage('Digite seu e-mail para receber o link de redefinição.');
+      setErrorMessage(t('senha.digiteEmail'));
       return;
     }
 
@@ -35,7 +37,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
       return;
     }
 
-    setInfoMessage('Se o e-mail existir, enviamos um link para redefinir sua senha. Confira também a caixa de spam.');
+    setInfoMessage(t('senha.enviado'));
   }
 
   return (
@@ -54,18 +56,16 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
           <View style={styles.logoBox}>
             <MaterialIcons name="lock-reset" size={26} color={colors.onPrimary} />
           </View>
-          <Text style={styles.title}>Recuperar Senha</Text>
-          <Text style={styles.subtitle}>
-            Digite o e-mail da sua conta e enviaremos um link para você criar uma nova senha.
-          </Text>
+          <Text style={styles.title}>{t('senha.titulo')}</Text>
+          <Text style={styles.subtitle}>{t('senha.subtitulo')}</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.field}>
-            <Text style={styles.label}>E-mail</Text>
+            <Text style={styles.label}>{t('comum.email')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="nome@empresa.com"
+              placeholder={t('comum.emailPlaceholder')}
               placeholderTextColor={colors.outline}
               autoCapitalize="none"
               keyboardType="email-address"
@@ -83,7 +83,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
               {loading ? (
                 <ActivityIndicator color={colors.onPrimary} />
               ) : (
-                <Text style={styles.submitButtonText}>Enviar Link de Redefinição</Text>
+                <Text style={styles.submitButtonText}>{t('senha.enviar')}</Text>
               )}
             </TouchableOpacity>
           )}
@@ -91,7 +91,7 @@ export function ForgotPasswordScreen({ navigation }: ForgotPasswordScreenProps) 
 
         <View style={styles.footer}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.footerLink}>Voltar para o Login</Text>
+            <Text style={styles.footerLink}>{t('senha.voltar')}</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -5,6 +5,7 @@ import { getCurrentUser, logout } from '../../services/authIntegration';
 import { pairHub, parseHubQrCode } from '../../services/hubPairing';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useT } from '../../i18n/IdiomaContext';
 
 interface AddDeviceScreenProps {
   navigation: any;
@@ -20,6 +21,7 @@ function formatAsMac(hubId: string): string {
 export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  const t = useT();
   const [hubId, setHubId] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -40,12 +42,12 @@ export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
     const user = getCurrentUser();
 
     if (!user) {
-      setErrorMessage('Sessão expirada. Faça login novamente.');
+      setErrorMessage(t('parear.sessaoExpirada'));
       return;
     }
 
     if (!rawHubId.trim()) {
-      setErrorMessage('Digite o ID do dispositivo (endereço MAC do ESP32) ou escaneie o QR Code.');
+      setErrorMessage(t('parear.digiteId'));
       return;
     }
 
@@ -54,7 +56,7 @@ export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
       await pairHub(user.uid, rawHubId);
       navigation.replace('MainTabs');
     } catch (error: any) {
-      setErrorMessage(error?.message ?? 'Não foi possível parear o dispositivo. Tente novamente.');
+      setErrorMessage(error?.message ?? t('parear.erro'));
     } finally {
       setLoading(false);
     }
@@ -63,7 +65,7 @@ export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
   function handleQrScanned(data: string) {
     const scannedHubId = parseHubQrCode(data);
     if (!scannedHubId) {
-      setErrorMessage('Esse QR Code não é de um hub A.C.D.C. Use o da etiqueta do dispositivo.');
+      setErrorMessage(t('parear.qrInvalido'));
       return;
     }
 
@@ -82,10 +84,8 @@ export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
           <View style={styles.logoBox}>
             <MaterialIcons name="sensors" size={26} color={colors.onPrimary} />
           </View>
-          <Text style={styles.title}>Adicionar Dispositivo</Text>
-          <Text style={styles.subtitle}>
-            Escaneie o QR Code da etiqueta do hub ou digite o ID dele pra vincular à sua conta.
-          </Text>
+          <Text style={styles.title}>{t('parear.titulo')}</Text>
+          <Text style={styles.subtitle}>{t('parear.subtitulo')}</Text>
         </View>
 
         <View style={styles.form}>
@@ -98,20 +98,20 @@ export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
             disabled={loading}
           >
             <MaterialIcons name="qr-code-scanner" size={22} color={colors.onPrimary} />
-            <Text style={styles.scanButtonText}>Escanear QR Code</Text>
+            <Text style={styles.scanButtonText}>{t('parear.escanear')}</Text>
           </TouchableOpacity>
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ou digite</Text>
+            <Text style={styles.dividerText}>{t('parear.ouDigite')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>ID do Dispositivo</Text>
+            <Text style={styles.label}>{t('parear.idLabel')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="Ex: A4:CF:12:3B:9E:01"
+              placeholder={t('parear.idPlaceholder')}
               placeholderTextColor={colors.outline}
               autoCapitalize="characters"
               value={hubId}
@@ -125,15 +125,13 @@ export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
             {loading ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text style={styles.submitButtonText}>Parear Dispositivo</Text>
+              <Text style={styles.submitButtonText}>{t('parear.parear')}</Text>
             )}
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            O QR Code e o ID ficam na etiqueta do hub. O ID também aparece no Serial Monitor do Arduino IDE quando o ESP32 liga.
-          </Text>
+          <Text style={styles.footerText}>{t('parear.rodape')}</Text>
         </View>
 
         {/* Esta tela pode ser a primeira do app (conta ainda sem hub), então
@@ -143,10 +141,10 @@ export function AddDeviceScreen({ navigation, route }: AddDeviceScreenProps) {
             onPress={() => (navigation.canGoBack() ? navigation.goBack() : navigation.replace('MainTabs'))}
             disabled={loading}
           >
-            <Text style={styles.link}>{navigation.canGoBack() ? 'Voltar' : 'Pular por enquanto'}</Text>
+            <Text style={styles.link}>{navigation.canGoBack() ? t('parear.voltar') : t('parear.pular')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => logout()} disabled={loading}>
-            <Text style={styles.link}>Sair da conta</Text>
+            <Text style={styles.link}>{t('parear.sair')}</Text>
           </TouchableOpacity>
         </View>
       </View>

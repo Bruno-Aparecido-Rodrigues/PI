@@ -8,11 +8,13 @@ import { SemInternetAviso } from '../SemInternetAviso';
 import { alternarAprendizado } from '../../services/alertsData';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useT } from '../../i18n/IdiomaContext';
 
 export function AppHeader() {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
   const insets = useSafeAreaInsets();
+  const t = useT();
   const { hubId } = useCurrentHub();
   const { online } = useHubStatus(hubId);
 
@@ -30,12 +32,10 @@ export function AppHeader() {
     try {
       const r = await alternarAprendizado(hubId);
       avisar(
-        r === 'encerrado'
-          ? 'Modo de teste: alertas de consumo ativados (vale na próxima rodada, até 5 min).'
-          : 'Período de aprendizado reiniciado: 30 dias sem alertas de consumo.'
+        r === 'encerrado' ? t('topo.testeAtivado') : t('topo.aprendizadoReiniciado')
       );
     } catch {
-      avisar('Não foi possível mudar o modo de teste.');
+      avisar(t('topo.erroTeste'));
     }
   }
 
@@ -52,7 +52,7 @@ export function AppHeader() {
           <View style={[styles.statusPill, online ? styles.statusPillOnline : styles.statusPillOffline]}>
             <View style={[styles.statusDot, online ? styles.statusDotOnline : styles.statusDotOffline]} />
             <Text style={[styles.statusText, online ? styles.statusTextOnline : styles.statusTextOffline]}>
-              {online ? 'Hub Conectado' : 'Hub Desconectado'}
+              {online ? t('topo.hubConectado') : t('topo.hubDesconectado')}
             </Text>
           </View>
         )}

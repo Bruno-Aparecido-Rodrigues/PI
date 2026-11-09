@@ -1,17 +1,17 @@
 // Conta do mês: usada pelo Dashboard (useEnergyData) e pelo widget da tela
 // inicial, pra os dois mostrarem exatamente o mesmo valor. (Não importa nada
 // do Firebase: o logout usa este arquivo via widget.)
+import { t, nomeBandeira } from '../i18n';
 
 // Só projeta a conta do mês depois de ter pelo menos 24h de medição no mês.
 // Com menos que isso, a projeção fica distorcida (ex: medir só a madrugada
 // e projetar o mês inteiro como se fosse sempre madrugada).
 export const MIN_PROJECTION_COVERAGE_MS = 24 * 60 * 60 * 1000;
 
-/** "Verde" / "bandeira amarela" / "Vermelha P1" -> "Bandeira Verde" etc. */
+/** "Verde" / "bandeira amarela" -> "Bandeira Verde" (pt) / "Green Flag" (en) */
 export function rotuloBandeira(bandeira: string | null | undefined): string | null {
-  if (!bandeira) return null;
-  const nome = bandeira.trim().replace(/^bandeira\s+/i, '');
-  return nome ? `Bandeira ${nome.charAt(0).toUpperCase()}${nome.slice(1)}` : null;
+  const nome = nomeBandeira(bandeira);
+  return nome ? t('bandeira.rotulo', { nome }) : null;
 }
 
 export interface ContaDoMes {

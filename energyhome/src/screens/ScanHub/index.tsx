@@ -5,6 +5,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useT } from '../../i18n/IdiomaContext';
 
 interface ScanHubScreenProps {
   navigation: any;
@@ -23,6 +24,7 @@ interface ScanHubScreenProps {
 export function ScanHubScreen({ navigation }: ScanHubScreenProps) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  const t = useT();
   const [permission, requestPermission] = useCameraPermissions();
   const isFocused = useIsFocused();
 
@@ -67,16 +69,14 @@ export function ScanHubScreen({ navigation }: ScanHubScreenProps) {
       return (
         <View style={styles.centered}>
           <MaterialIcons name="photo-camera" size={48} color={colors.onPrimary} />
-          <Text style={styles.permissionTitle}>Precisamos da câmera</Text>
-          <Text style={styles.permissionText}>
-            A câmera é usada só pra ler o QR Code da etiqueta do hub.
-          </Text>
+          <Text style={styles.permissionTitle}>{t('qr.permTitulo')}</Text>
+          <Text style={styles.permissionText}>{t('qr.permTexto')}</Text>
           <TouchableOpacity
             style={styles.permissionButton}
             onPress={() => (permission.canAskAgain ? requestPermission() : Linking.openSettings())}
           >
             <Text style={styles.permissionButtonText}>
-              {permission.canAskAgain ? 'Permitir câmera' : 'Abrir configurações'}
+              {permission.canAskAgain ? t('qr.permitir') : t('qr.abrirConfig')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -96,7 +96,7 @@ export function ScanHubScreen({ navigation }: ScanHubScreenProps) {
         ) : null}
         <View style={styles.overlay} pointerEvents="none">
           <View style={styles.frame} />
-          <Text style={styles.hint}>Aponte para o QR Code da etiqueta do hub</Text>
+          <Text style={styles.hint}>{t('qr.dica')}</Text>
         </View>
       </>
     );
@@ -108,7 +108,7 @@ export function ScanHubScreen({ navigation }: ScanHubScreenProps) {
       <TouchableOpacity
         style={styles.closeButton}
         onPress={() => navigation.goBack()}
-        accessibilityLabel="Fechar leitor"
+        accessibilityLabel={t('qr.fechar')}
       >
         <MaterialIcons name="close" size={26} color={colors.onPrimary} />
       </TouchableOpacity>

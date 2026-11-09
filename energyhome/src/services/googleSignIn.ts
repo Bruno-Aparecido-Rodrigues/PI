@@ -1,5 +1,6 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { GOOGLE_WEB_CLIENT_ID, GOOGLE_IOS_CLIENT_ID } from '../constants/googleAuth';
+import { t } from '../i18n';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Login com Google (biblioteca @react-native-google-signin/google-signin)
@@ -60,8 +61,8 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
     return {
       status: 'error',
       message: isExpoGo
-        ? 'O login com Google não funciona no Expo Go. Abra a versão de desenvolvimento do app.'
-        : 'Login com Google indisponível nesta versão do app. Gere a build de novo.',
+        ? t('google.expoGo')
+        : t('google.indisponivel'),
     };
   }
 
@@ -83,7 +84,7 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
     if (!idToken) {
       return {
         status: 'error',
-        message: 'O Google não devolveu o token de login. Confira o GOOGLE_WEB_CLIENT_ID em googleAuth.ts.',
+        message: t('google.semToken'),
       };
     }
 
@@ -94,7 +95,7 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
         return { status: 'cancelled' };
       }
       if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        return { status: 'error', message: 'O Google Play Services está indisponível ou desatualizado neste aparelho.' };
+        return { status: 'error', message: t('google.playServices') };
       }
       // Código 10 = DEVELOPER_ERROR no Android: falta o SHA-1 do app no
       // Client ID Android do Google Cloud, ou o pacote está diferente.
@@ -102,12 +103,12 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
         console.warn('Google Sign-In DEVELOPER_ERROR:', error);
         return {
           status: 'error',
-          message: 'Configuração do Google incompleta (SHA-1 ou Client ID). Veja o passo a passo do login com Google.',
+          message: t('google.config'),
         };
       }
     }
     console.warn('Erro no login com Google:', error);
-    return { status: 'error', message: 'Não foi possível entrar com o Google. Tente novamente.' };
+    return { status: 'error', message: t('google.erro') };
   }
 }
 

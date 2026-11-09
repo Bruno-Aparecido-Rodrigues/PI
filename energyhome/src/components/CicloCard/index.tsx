@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { ConfigTarifa, subscribeToConfigTarifa, salvarCiclo } from '../../services/tarifa';
-import { dataCompleta, diaMes, mascaraData, periodoAtual, validarCiclo } from '../../services/ciclo';
+import { dataCompleta, mascaraData, periodoAtual, validarCiclo } from '../../services/ciclo';
 // Mesmo visual do card de tarifa, logo acima dele em Ajustes
 import { criarEstilos } from '../TarifaCard/style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useT } from '../../i18n/IdiomaContext';
+import { diaMesCurto } from '../../i18n';
 
 interface CicloCardProps {
   hubId: string | null;
@@ -20,6 +22,7 @@ interface CicloCardProps {
 export function CicloCard({ hubId }: CicloCardProps) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  const t = useT();
   const [config, setConfig] = useState<ConfigTarifa | null>(null);
   const [ultima, setUltima] = useState('');
   const [proxima, setProxima] = useState('');
@@ -54,9 +57,9 @@ export function CicloCard({ hubId }: CicloCardProps) {
     setSalvando(true);
     try {
       await salvarCiclo(hubId, resultado);
-      setMensagem('Ciclo salvo. A conta estimada já usa essas datas.');
+      setMensagem(t('ciclo.salvo'));
     } catch {
-      setErro('Não foi possível salvar. Tente novamente.');
+      setErro(t('comum.erroSalvar'));
     } finally {
       setSalvando(false);
     }
@@ -68,9 +71,9 @@ export function CicloCard({ hubId }: CicloCardProps) {
     setMensagem('');
     try {
       await salvarCiclo(hubId, null);
-      setMensagem('Voltou a usar o mês do calendário.');
+      setMensagem(t('ciclo.voltouMes'));
     } catch {
-      setErro('Não foi possível salvar. Tente novamente.');
+      setErro(t('comum.erroSalvar'));
     }
   }
 
@@ -78,20 +81,17 @@ export function CicloCard({ hubId }: CicloCardProps) {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <MaterialIcons name="event" size={20} color={colors.primary} />
-        <Text style={styles.cardTitle}>Ciclo da Conta</Text>
+        <Text style={styles.cardTitle}>{t('ciclo.titulo')}</Text>
       </View>
-      <Text style={styles.hint}>
-        A distribuidora cobra o consumo entre duas leituras do relógio, não o mês do calendário. Copie as datas
-        da sua conta de luz.
-      </Text>
+      <Text style={styles.hint}>{t('ciclo.dica')}</Text>
 
       <View style={styles.linhaCampos}>
         <View style={styles.campoMetade}>
-          <Text style={styles.label}>Última leitura</Text>
+          <Text style={styles.label}>{t('ciclo.ultima')}</Text>
           <TextInput
             style={styles.input}
             keyboardType="number-pad"
-            placeholder="26/10/2026"
+            placeholder={t('ciclo.placeholderUltima')}
             placeholderTextColor={colors.outline}
             value={ultima}
             onChangeText={(t) => setUltima(mascaraData(t))}
@@ -100,11 +100,11 @@ export function CicloCard({ hubId }: CicloCardProps) {
           />
         </View>
         <View style={styles.campoMetade}>
-          <Text style={styles.label}>Próxima leitura</Text>
+          <Text style={styles.label}>{t('ciclo.proxima')}</Text>
           <TextInput
             style={styles.input}
             keyboardType="number-pad"
-            placeholder="23/11/2026"
+            placeholder={t('ciclo.placeholderProxima')}
             placeholderTextColor={colors.outline}
             value={proxima}
             onChangeText={(t) => setProxima(mascaraData(t))}
@@ -115,16 +115,15 @@ export function CicloCard({ hubId }: CicloCardProps) {
       </View>
 
       <View style={styles.resultado}>
-        <Text style={styles.resultadoRotulo}>Período usado na conta</Text>
+        <Text style={styles.resultadoRotulo}>{t('ciclo.periodo')}</Text>
         <Text style={styles.resultadoValor}>
-          {periodo.tipo === 'ciclo' ? `${diaMes(periodo.inicio)} a ${diaMes(periodo.fim)}` : 'Mês do calendário'}
+          {periodo.tipo === 'ciclo'
+            ? t('ciclo.intervalo', { inicio: diaMesCurto(periodo.inicio), fim: diaMesCurto(periodo.fim) })
+            : t('ciclo.mesCalendario')}
         </Text>
       </View>
       {periodo.tipo === 'ciclo' && periodo.estimado ? (
-        <Text style={styles.hint}>
-          A próxima leitura informada já passou, então o app estimou o ciclo atual com a mesma duração. Quando
-          chegar a conta nova, atualize as datas.
-        </Text>
+        <Text style={styles.hint}>{t('ciclo.estimadoDica')}</Text>
       ) : null}
 
       {erro ? <Text style={styles.erro}>{erro}</Text> : null}
@@ -134,12 +133,12 @@ export function CicloCard({ hubId }: CicloCardProps) {
         {salvando ? (
           <ActivityIndicator size="small" color={colors.onPrimary} />
         ) : (
-          <Text style={styles.botaoTexto}>Salvar</Text>
+          <Text style={styles.botaoTexto}>{t('comum.salvar')}</Text>
         )}
       </TouchableOpacity>
       {ciclo ? (
         <TouchableOpacity onPress={usarMesDoCalendario} disabled={desabilitado}>
-          <Text style={styles.link}>Usar o mês do calendário</Text>
+          <Text style={styles.link}>{t('ciclo.usarMes')}</Text>
         </TouchableOpacity>
       ) : null}
     </View>

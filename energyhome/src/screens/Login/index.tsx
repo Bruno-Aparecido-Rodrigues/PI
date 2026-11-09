@@ -5,6 +5,7 @@ import { login, loginWithGoogleIdToken } from '../../services/authIntegration';
 import { signInWithGoogle } from '../../services/googleSignIn';
 import { criarEstilos } from './style';
 import { useCores, useEstilos, useTema } from '../../theme/TemaContext';
+import { useT } from '../../i18n/IdiomaContext';
 
 interface LoginScreenProps {
   navigation: any;
@@ -14,6 +15,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
   const styles = useEstilos(criarEstilos);
   const { escuro } = useTema();
   const colors = useCores();
+  const t = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -55,7 +57,7 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
     setInfoMessage('');
 
     if (!email || !password) {
-      setErrorMessage('Preencha e-mail e senha para continuar.');
+      setErrorMessage(t('login.preencha'));
       return;
     }
 
@@ -79,15 +81,15 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             <MaterialIcons name="bolt" size={26} color={colors.onPrimary} />
           </View>
           <Text style={styles.title}>A.C.D.C</Text>
-          <Text style={styles.subtitle}>Monitoramento de precisão para sua casa</Text>
+          <Text style={styles.subtitle}>{t('login.subtitulo')}</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.field}>
-            <Text style={styles.label}>E-mail</Text>
+            <Text style={styles.label}>{t('comum.email')}</Text>
             <TextInput
               style={styles.input}
-              placeholder="nome@empresa.com"
+              placeholder={t('comum.emailPlaceholder')}
               placeholderTextColor={colors.outline}
               autoCapitalize="none"
               keyboardType="email-address"
@@ -98,9 +100,9 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
 
           <View style={styles.field}>
             <View style={styles.labelRow}>
-              <Text style={styles.label}>Senha</Text>
+              <Text style={styles.label}>{t('comum.senha')}</Text>
               <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-                <Text style={styles.link}>Esqueceu a senha?</Text>
+                <Text style={styles.link}>{t('login.esqueceu')}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.passwordWrapper}>
@@ -132,13 +134,13 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
             {loading ? (
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
-              <Text style={styles.submitButtonText}>Entrar</Text>
+              <Text style={styles.submitButtonText}>{t('login.entrar')}</Text>
             )}
           </TouchableOpacity>
 
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ou</Text>
+            <Text style={styles.dividerText}>{t('login.ou')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
@@ -153,16 +155,16 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
               <>
                 {/* Logo oficial do Google (recortado do pacote de marca do Google, signin-assets.zip) */}
                 <Image source={require('../../../assets/google-g.png')} style={styles.googleLogo} />
-                <Text style={[styles.googleButtonText, escuro && styles.googleButtonTextEscuro]}>Continuar com o Google</Text>
+                <Text style={[styles.googleButtonText, escuro && styles.googleButtonTextEscuro]}>{t('login.google')}</Text>
               </>
             )}
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Não tem uma conta? </Text>
+          <Text style={styles.footerText}>{t('login.semConta')}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.footerLink}>Criar Conta</Text>
+            <Text style={styles.footerLink}>{t('login.criarConta')}</Text>
           </TouchableOpacity>
         </View>
       </View>

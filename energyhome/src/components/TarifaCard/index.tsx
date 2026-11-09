@@ -22,43 +22,34 @@ import {
 } from '../../services/tarifa';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useT } from '../../i18n/IdiomaContext';
+import { reais, num, dataCurta, diaMesCurto, hora, mesAno, nomeBandeira, t as traduzir } from '../../i18n';
 
 interface TarifaCardProps {
   hubId: string | null;
 }
 
-const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-
-function reais(valor: number, casas = 2): string {
-  return `R$ ${valor.toFixed(casas).replace('.', ',')}`;
-}
-
-function dataBR(iso: string | null): string {
+/** "2026-07-04" -> "04/07/2026" / "Jul 4, 2026" */
+function dataIso(iso: string | null): string {
   if (!iso) return '—';
-  const [a, m, d] = iso.split('-');
-  return `${d}/${m}/${a}`;
+  const [a, m, d] = iso.split('-').map(Number);
+  return dataCurta(new Date(a, m - 1, d).getTime());
 }
 
-function mesBR(competencia: string | null): string {
-  if (!competencia) return '—';
-  const [a, m] = competencia.split('-');
-  return `${MESES[Number(m) - 1] ?? m}/${a}`;
+/** "09/11 às 14:05" / "Nov 9 at 14:05" */
+function quando(ms: number): string {
+  return traduzir('comum.dataHora', { data: diaMesCurto(ms), hora: hora(ms) });
 }
 
-function horaBR(ms: number): string {
-  const d = new Date(ms);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)} às ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
-/** "18" / "18,5" -> 18.5 (ou null se não for número) */
+/** "18" / "18,5" / "18.5" -> 18.5 (ou null se não for número) */
 function lerCampo(texto: string): number | null {
   const n = Number(texto.trim().replace(',', '.'));
   return texto.trim() !== '' && Number.isFinite(n) ? n : null;
 }
 
+/** 5.6 -> "5,6" (pt) / "5.6" (en), sem casas a mais */
 function paraCampo(n: number): string {
-  return String(n).replace('.', ',');
+  return num(n, 4).replace(/[.,]?0+$/, '');
 }
 
 // A base da ANEEL ainda usa a sigla antiga de algumas distribuidoras que
@@ -86,11 +77,9 @@ function nomeDistribuidora(sigla: string): string {
   return atual ? `${sigla} (${atual})` : sigla;
 }
 
-/** "Bandeira amarela" -> "Amarela" (mais curto pra caber na tela) */
+/** "Bandeira amarela" -> "Amarela" / "Yellow" (mais curto pra caber na tela) */
 function nomeCurtoBandeira(nome: string | null): string {
-  if (!nome) return '—';
-  const curto = nome.replace(/^bandeira\s+/i, '');
-  return curto.charAt(0).toUpperCase() + curto.slice(1);
+  return nomeBandeira(nome) ?? '—';
 }
 
 /**
@@ -100,6 +89,7 @@ function nomeCurtoBandeira(nome: string | null): string {
 export function TarifaCard({ hubId }: TarifaCardProps) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  const t = useT();
   // Margem da barra de navegação do celular no seletor de distribuidora
   const insets = useSafeAreaInsets();
   const [config, setConfig] = useState<ConfigTarifa | null>(null);
@@ -180,11 +170,10 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
     setBuscandoAneel(true);
     try {
       await atualizarTarifaAneel(hubId, cfg);
-      setMensagem('Tarifa e bandeira atualizadas pela ANEEL.');
+      setMensagem(t('tarifa.atualizada'));
     } catch (e: any) {
       setErro(
-        `${e?.message ?? 'Não foi possível consultar a ANEEL.'} ` +
-          (cfg.aneel ? 'Continuamos usando os últimos valores.' : 'Tente de novo em instantes.')
+        `${e?.message ?? t('tarifa.erroAneel')} ` + (cfg.aneel ? t('tarifa.usandoUltimos') : t('tarifa.tenteDeNovo'))
       );
     } finally {
       setBuscandoAneel(false);
@@ -216,7 +205,7 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
       }
       await buscarNaAneel({ ...config, modo: 'aneel', distribuidora });
     } catch (e: any) {
-      setErro(e?.message ?? 'Não foi possível mudar o modo da tarifa.');
+      setErro(e?.message ?? t('tarifa.erroModo'));
     }
   }
 
@@ -235,7 +224,7 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
     try {
       await carregarDistribuidoras();
     } catch {
-      setErro('Não foi possível carregar a lista de distribuidoras da ANEEL.');
+      setErro(t('tarifa.erroLista'));
       setSeletorAberto(false);
     }
   }
@@ -246,7 +235,7 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
 
     const valorCip = cip.trim() === '' ? 0 : lerCampo(cip);
     if (valorCip === null || valorCip < 0 || valorCip > 1000) {
-      setErro('Digite um valor de iluminação pública válido (em reais).');
+      setErro(t('tarifa.erroCip'));
       return;
     }
 
@@ -256,7 +245,7 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
         const valorIcms = icms.trim() === '' ? 0 : lerCampo(icms);
         const valorPis = pisCofins.trim() === '' ? 0 : lerCampo(pisCofins);
         if (valorIcms === null || valorPis === null || valorIcms < 0 || valorPis < 0 || valorIcms + valorPis >= 60) {
-          setErro('Confira os impostos: digite só os percentuais (ex: 18 e 5,6).');
+          setErro(t('tarifa.erroImpostos'));
           return;
         }
         const campos: Parameters<typeof salvarConfigTarifa>[1] = {
@@ -276,14 +265,14 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
       } else {
         const valorTarifa = lerCampo(tarifaManual);
         if (valorTarifa === null || valorTarifa <= 0 || valorTarifa >= 100) {
-          setErro('Digite um valor de tarifa válido (R$ por kWh).');
+          setErro(t('tarifa.erroTarifa'));
           return;
         }
         await salvarConfigTarifa(hubId, { tariff: valorTarifa, cip: valorCip });
       }
-      setMensagem('Configuração da tarifa salva.');
+      setMensagem(t('tarifa.salva'));
     } catch {
-      setErro('Não foi possível salvar. Tente novamente.');
+      setErro(t('comum.erroSalvar'));
     } finally {
       setSalvando(false);
     }
@@ -303,13 +292,13 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <MaterialIcons name="payments" size={20} color={colors.primary} />
-        <Text style={styles.cardTitle}>Tarifa de Energia</Text>
+        <Text style={styles.cardTitle}>{t('tarifa.titulo')}</Text>
       </View>
 
       <View style={styles.switchRow}>
         <View style={styles.switchTextos}>
-          <Text style={styles.switchLabel}>Tarifa automática (ANEEL)</Text>
-          <Text style={styles.hint}>Busca a tarifa da sua distribuidora e a bandeira do mês.</Text>
+          <Text style={styles.switchLabel}>{t('tarifa.automatica')}</Text>
+          <Text style={styles.hint}>{t('tarifa.automaticaDica')}</Text>
         </View>
         <Switch
           value={automatica}
@@ -323,8 +312,10 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
         <>
           <TouchableOpacity style={styles.seletor} onPress={abrirSeletor} disabled={desabilitado}>
             <View>
-              <Text style={styles.label}>Distribuidora</Text>
-              <Text style={styles.seletorValor}>{config?.distribuidora ? nomeDistribuidora(config.distribuidora) : 'Escolher…'}</Text>
+              <Text style={styles.label}>{t('tarifa.distribuidora')}</Text>
+              <Text style={styles.seletorValor}>
+                {config?.distribuidora ? nomeDistribuidora(config.distribuidora) : t('tarifa.escolher')}
+              </Text>
             </View>
             <MaterialIcons name="expand-more" size={22} color={colors.onSurfaceVariant} />
           </TouchableOpacity>
@@ -333,35 +324,40 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
             {buscandoAneel ? (
               <View style={styles.linhaCarregando}>
                 <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={styles.hint}>Consultando a ANEEL…</Text>
+                <Text style={styles.hint}>{t('tarifa.consultando')}</Text>
               </View>
             ) : config?.aneel ? (
               <>
                 <View style={styles.linhaInfo}>
-                  <Text style={styles.infoRotulo}>Tarifa ANEEL (sem impostos)</Text>
+                  <Text style={styles.infoRotulo}>{t('tarifa.semImpostos')}</Text>
                   <Text style={styles.infoValor}>{reais(config.aneel.tarifaKwh)}/kWh</Text>
                 </View>
                 <Text style={styles.hint}>
-                  Vigente de {dataBR(config.aneel.vigenciaInicio)} a {dataBR(config.aneel.vigenciaFim)}
+                  {t('tarifa.vigente', {
+                    inicio: dataIso(config.aneel.vigenciaInicio),
+                    fim: dataIso(config.aneel.vigenciaFim),
+                  })}
                 </Text>
                 <View style={styles.linhaInfo}>
-                  <Text style={styles.infoRotulo}>Bandeira de {mesBR(config.aneel.bandeiraCompetencia)}</Text>
+                  <Text style={styles.infoRotulo}>
+                    {t('tarifa.bandeiraDe', { mes: mesAno(config.aneel.bandeiraCompetencia) })}
+                  </Text>
                   <Text style={styles.infoValor}>{nomeCurtoBandeira(config.aneel.bandeira)}</Text>
                 </View>
                 {config.aneel.bandeiraAdicionalKwh > 0 ? (
                   <Text style={styles.hint}>
-                    Adicional de {reais(config.aneel.bandeiraAdicionalKwh * 100)} a cada 100 kWh (sem impostos)
+                    {t('tarifa.adicional', { valor: reais(config.aneel.bandeiraAdicionalKwh * 100) })}
                   </Text>
                 ) : null}
                 <View style={styles.linhaInfo}>
-                  <Text style={styles.hint}>Atualizado em {horaBR(config.aneel.atualizadoEm)}</Text>
+                  <Text style={styles.hint}>{t('tarifa.atualizadoEm', { data: quando(config.aneel.atualizadoEm) })}</Text>
                   <TouchableOpacity onPress={() => config && buscarNaAneel(config)}>
-                    <Text style={styles.link}>Atualizar agora</Text>
+                    <Text style={styles.link}>{t('tarifa.atualizarAgora')}</Text>
                   </TouchableOpacity>
                 </View>
               </>
             ) : (
-              <Text style={styles.hint}>Escolha a distribuidora pra buscar a tarifa.</Text>
+              <Text style={styles.hint}>{t('tarifa.escolhaDistribuidora')}</Text>
             )}
           </View>
 
@@ -371,7 +367,7 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
               <TextInput
                 style={styles.input}
                 keyboardType="decimal-pad"
-                placeholder="ex: 18"
+                placeholder={t('tarifa.exIcms')}
                 placeholderTextColor={colors.outline}
                 value={icms}
                 onChangeText={setIcms}
@@ -383,7 +379,7 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
               <TextInput
                 style={styles.input}
                 keyboardType="decimal-pad"
-                placeholder="ex: 5,6"
+                placeholder={t('tarifa.exPis')}
                 placeholderTextColor={colors.outline}
                 value={pisCofins}
                 onChangeText={setPisCofins}
@@ -391,13 +387,11 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
               />
             </View>
           </View>
-          <Text style={styles.hint}>
-            Copie os percentuais do quadro de tributos da sua conta de luz (some PIS e COFINS).
-          </Text>
+          <Text style={styles.hint}>{t('tarifa.impostosDica')}</Text>
         </>
       ) : (
         <View style={styles.campo}>
-          <Text style={styles.label}>Tarifa com impostos (R$/kWh)</Text>
+          <Text style={styles.label}>{t('tarifa.comImpostos')}</Text>
           <View style={styles.inputComPrefixo}>
             <Text style={styles.prefixo}>R$</Text>
             <TextInput
@@ -412,24 +406,24 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
       )}
 
       <View style={styles.campo}>
-        <Text style={styles.label}>Iluminação pública (R$/mês)</Text>
+        <Text style={styles.label}>{t('tarifa.iluminacao')}</Text>
         <View style={styles.inputComPrefixo}>
           <Text style={styles.prefixo}>R$</Text>
           <TextInput
             style={styles.inputSemBorda}
             keyboardType="decimal-pad"
-            placeholder="0,00"
+            placeholder={num(0)}
             placeholderTextColor={colors.outline}
             value={cip}
             onChangeText={setCip}
             editable={!desabilitado}
           />
         </View>
-        <Text style={styles.hint}>Valor fixo cobrado pela prefeitura (CIP/COSIP), aparece na conta de luz.</Text>
+        <Text style={styles.hint}>{t('tarifa.iluminacaoDica')}</Text>
       </View>
 
       <View style={styles.resultado}>
-        <Text style={styles.resultadoRotulo}>Tarifa final usada nos cálculos</Text>
+        <Text style={styles.resultadoRotulo}>{t('tarifa.final')}</Text>
         <Text style={styles.resultadoValor}>{previa !== null ? `${reais(previa)}/kWh` : '—'}</Text>
       </View>
 
@@ -440,7 +434,7 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
         {salvando ? (
           <ActivityIndicator size="small" color={colors.onPrimary} />
         ) : (
-          <Text style={styles.botaoTexto}>Salvar</Text>
+          <Text style={styles.botaoTexto}>{t('comum.salvar')}</Text>
         )}
       </TouchableOpacity>
 
@@ -448,14 +442,14 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
         <View style={styles.modalFundo}>
           <View style={[styles.modalCaixa, { paddingBottom: 16 + insets.bottom }]}>
             <View style={styles.modalTopo}>
-              <Text style={styles.cardTitle}>Distribuidora</Text>
+              <Text style={styles.cardTitle}>{t('tarifa.distribuidora')}</Text>
               <TouchableOpacity onPress={() => setSeletorAberto(false)}>
                 <MaterialIcons name="close" size={24} color={colors.onSurfaceVariant} />
               </TouchableOpacity>
             </View>
             <TextInput
               style={styles.input}
-              placeholder="Buscar (ex: ENEL)"
+              placeholder={t('tarifa.buscar')}
               placeholderTextColor={colors.outline}
               autoCapitalize="characters"
               value={busca}
@@ -478,7 +472,7 @@ export function TarifaCard({ hubId }: TarifaCardProps) {
                     ) : null}
                   </TouchableOpacity>
                 )}
-                ListEmptyComponent={<Text style={styles.hint}>Nenhuma distribuidora encontrada.</Text>}
+                ListEmptyComponent={<Text style={styles.hint}>{t('tarifa.nenhuma')}</Text>}
               />
             )}
           </View>

@@ -14,20 +14,20 @@ import {
   PowerReading,
 } from '../../services/energyData';
 import { ConfigTarifa, subscribeToConfigTarifa, TARIFA_PADRAO } from '../../services/tarifa';
-import { periodoAtual, diaMes } from '../../services/ciclo';
+import { periodoAtual } from '../../services/ciclo';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
 import { useRecarregar } from '../../hooks/useRecarregar';
+import { useT } from '../../i18n/IdiomaContext';
+import { Chave, diaMesCurto, num, reais } from '../../i18n';
 
-const PERIODS = [
-  { id: 'today', label: 'Hoje' },
-  { id: 'week', label: 'Semana' },
-  { id: 'month', label: 'Mês' },
-] as const;
+type PeriodId = 'today' | 'week' | 'month';
 
-type PeriodId = (typeof PERIODS)[number]['id'];
-
-const WEEKDAY_LABELS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+const PERIODS: readonly { id: PeriodId; label: Chave }[] = [
+  { id: 'today', label: 'graf.hoje' },
+  { id: 'week', label: 'graf.semana' },
+  { id: 'month', label: 'graf.mes' },
+];
 
 function buildDayList(count: number): Date[] {
   const days: Date[] = [];
@@ -60,6 +60,7 @@ function ChartsConteudo({
 }: { navigation: any } & { refreshControl: React.ReactElement<any> }) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  const t = useT();
   const { hubId, loading: hubLoading } = useCurrentHub();
   const [period, setPeriod] = useState<PeriodId>('week');
   const [readings, setReadings] = useState<PowerReading[]>([]);
@@ -99,18 +100,19 @@ function ChartsConteudo({
       const hourly = bucketKwhByHourToday(readings);
       const currentHour = new Date().getHours();
       return hourly.slice(0, currentHour + 1).map((value, hour) => ({
-        label: `${hour}h`,
+        label: t('graf.hora', { h: hour }),
         value,
       }));
     }
 
     const days = period === 'week' ? buildDayList(7) : daysSince(periodo.inicio);
     const values = bucketKwhByDay(readings, days);
+    const diasDaSemana = t('graf.diasSemana').split(',');
     return days.map((day, i) => ({
-      label: period === 'week' ? WEEKDAY_LABELS[day.getDay()] : String(day.getDate()),
+      label: period === 'week' ? diasDaSemana[day.getDay()] : String(day.getDate()),
       value: values[i],
     }));
-  }, [readings, period, periodo.inicio]);
+  }, [readings, period, periodo.inicio, t]);
 
   const costData: BarChartDatum[] = useMemo(
     () => kwhData.map((d) => ({ label: d.label, value: d.value * tariff })),
@@ -119,8 +121,8 @@ function ChartsConteudo({
 
   const profileData: BarChartDatum[] = useMemo(() => {
     const avgWatts = averageWattsByHourOfDay(profileReadings);
-    return avgWatts.map((value, hour) => ({ label: `${hour}h`, value }));
-  }, [profileReadings]);
+    return avgWatts.map((value, hour) => ({ label: t('graf.hora', { h: hour }), value }));
+  }, [profileReadings, t]);
 
   const totalKwh = kwhData.reduce((sum, d) => sum + d.value, 0);
   const totalCost = costData.reduce((sum, d) => sum + d.value, 0);
@@ -131,10 +133,10 @@ function ChartsConteudo({
         <AppHeader />
         <View style={styles.emptyState}>
           <MaterialIcons name="sensors-off" size={48} color={colors.onSurfaceVariant} />
-          <Text style={styles.emptyTitle}>Nenhum dispositivo pareado</Text>
-          <Text style={styles.emptySubtitle}>Adicione um hub pra ver os gráficos de consumo.</Text>
+          <Text style={styles.emptyTitle}>{t('comum.semHubTitulo')}</Text>
+          <Text style={styles.emptySubtitle}>{t('graf.semHubTexto')}</Text>
           <TouchableOpacity style={styles.emptyButton} onPress={() => navigation.navigate('AddDevice')}>
-            <Text style={styles.emptyButtonText}>Adicionar Dispositivo</Text>
+            <Text style={styles.emptyButtonText}>{t('comum.adicionarDispositivo')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -146,8 +148,8 @@ function ChartsConteudo({
       <AppHeader />
       <ScrollView contentContainerStyle={styles.content} refreshControl={refreshControl}>
         <View style={styles.headerRow}>
-          <Text style={styles.title}>Análise de Consumo</Text>
-          <Text style={styles.subtitle}>Um mergulho no desempenho energético da sua casa.</Text>
+          <Text style={styles.title}>{t('graf.titulo')}</Text>
+          <Text style={styles.subtitle}>{t('graf.subtitulo')}</Text>
         </View>
 
         <View style={styles.periodSelector}>
@@ -158,7 +160,7 @@ function ChartsConteudo({
               style={[styles.periodButton, period === p.id && styles.periodButtonActive]}
             >
               <Text style={[styles.periodText, period === p.id && styles.periodTextActive]}>
-                {p.id === 'month' && ciclo ? 'Ciclo' : p.label}
+                {t(p.id === 'month' && ciclo ? 'graf.ciclo' : p.label)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -166,37 +168,37 @@ function ChartsConteudo({
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.sectionTitle}>Consumo de Energia</Text>
-            <Text style={styles.sectionValue}>{totalKwh.toFixed(1)} kWh</Text>
+            <Text style={styles.sectionTitle}>{t('graf.consumo')}</Text>
+            <Text style={styles.sectionValue}>{num(totalKwh, 1)} kWh</Text>
           </View>
           <Text style={styles.sectionSubtitle}>
             {period === 'today'
-              ? 'Por hora, hoje'
+              ? t('graf.porHora')
               : period === 'week'
-                ? 'Por dia, últimos 7 dias'
+                ? t('graf.ultimos7')
                 : ciclo
-                  ? `Por dia, ciclo de ${diaMes(periodo.inicio)} a ${diaMes(periodo.fim)}`
-                  : 'Por dia, este mês'}
+                  ? t('graf.porCiclo', { inicio: diaMesCurto(periodo.inicio), fim: diaMesCurto(periodo.fim) })
+                  : t('graf.porMes')}
           </Text>
-          <BarChart data={kwhData} valueFormatter={(v) => v.toFixed(1)} />
+          <BarChart data={kwhData} valueFormatter={(v) => num(v, 1)} />
         </View>
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.sectionTitle}>Custo Estimado</Text>
-            <Text style={styles.sectionValue}>R$ {totalCost.toFixed(2).replace('.', ',')}</Text>
+            <Text style={styles.sectionTitle}>{t('graf.custo')}</Text>
+            <Text style={styles.sectionValue}>{reais(totalCost)}</Text>
           </View>
-          <Text style={styles.sectionSubtitle}>Consumo × tarifa atual (R$ {tariff.toFixed(2).replace('.', ',')}/kWh)</Text>
+          <Text style={styles.sectionSubtitle}>{t('graf.custoSub', { valor: reais(tariff) })}</Text>
           <BarChart
             data={costData}
             barColor={colors.tertiary}
-            valueFormatter={(v) => `R$${v.toFixed(v < 10 ? 2 : 1).replace('.', ',')}`}
+            valueFormatter={(v) => `R$${num(v, v < 10 ? 2 : 1)}`}
           />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Perfil de Consumo por Horário</Text>
-          <Text style={styles.sectionSubtitle}>Potência média em cada hora do dia, últimos 7 dias</Text>
+          <Text style={styles.sectionTitle}>{t('graf.perfil')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('graf.perfilSub')}</Text>
           <BarChart
             data={profileData}
             barColor={colors.secondary}

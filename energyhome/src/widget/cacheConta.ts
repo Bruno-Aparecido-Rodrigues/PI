@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PowerReading } from '../services/energyData';
 import { calcularContaDoMes } from '../services/contaMes';
 import type { EstadoWidget, Situacao } from './tipos';
+import { t } from '../i18n';
 
 // Último estado da conta do período (ciclo da conta ou mês, ver
 // services/ciclo.ts), guardado no celular. O app grava enquanto
@@ -64,7 +65,7 @@ export function estadoDoCache(
   const venceu =
     typeof cache.periodoFim === 'number' ? agora >= cache.periodoFim : cache.competencia !== competenciaDe(agora);
   if (venceu) {
-    return { tipo: 'aviso', mensagem: 'Abra o app pra atualizar a conta do mês.' };
+    return { tipo: 'aviso', mensagem: t('widget.abraApp') };
   }
   const conta = calcularContaDoMes(cache.monthKwh, cache.coveredMs, cache.tariff, cache.cip, agora, cache.periodoFim);
   return {

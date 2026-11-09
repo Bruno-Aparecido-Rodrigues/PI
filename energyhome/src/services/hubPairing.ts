@@ -1,5 +1,6 @@
 import { getDatabase, ref, onValue, set, get, update, serverTimestamp } from 'firebase/database';
 import { app } from './authIntegration';
+import { t } from '../i18n';
 
 const db = getDatabase(app);
 
@@ -107,14 +108,12 @@ export async function pairHub(uid: string, rawHubId: string): Promise<void> {
   const hubId = normalizeHubId(rawHubId);
 
   if (hubId.length < 6) {
-    throw new Error('ID de dispositivo inválido.');
+    throw new Error(t('parear.idInvalido'));
   }
 
   const registeredSnapshot = await get(ref(db, `hubs/${hubId}/registered`));
   if (!registeredSnapshot.exists()) {
-    throw new Error(
-      'Esse dispositivo ainda não foi detectado. Confira se ele está ligado e conectado à internet, e tente de novo em alguns segundos.'
-    );
+    throw new Error(t('parear.naoDetectado'));
   }
 
   // O hub ficou sem dono por mais de 6 meses? Então o histórico antigo é
@@ -152,7 +151,7 @@ export async function pairHub(uid: string, rawHubId: string): Promise<void> {
         if (!isPermissionDenied(segundoErro)) throw segundoErro;
       }
     }
-    throw new Error('Esse dispositivo já está pareado com outra conta.');
+    throw new Error(t('parear.jaPareado'));
   }
 }
 

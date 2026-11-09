@@ -43,6 +43,36 @@ export const criarEstilos = (colors: AppColors) =>
     alignItems: 'center',
     gap: 10,
   },
+  idiomaOpcoes: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  idiomaChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 9999,
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+  },
+  idiomaChipAtivo: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  idiomaChipTexto: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.onSurfaceVariant,
+  },
+  idiomaChipTextoAtivo: {
+    color: colors.onPrimary,
+  },
+  idiomaDica: {
+    fontSize: 12,
+    color: colors.onSurfaceVariant,
+    marginTop: -6,
+  },
   cardTitle: {
     fontSize: 17,
     fontWeight: '700',

@@ -9,10 +9,11 @@ import { useEnergyData } from '../../hooks/useEnergyData';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { useHubStatus } from '../../hooks/useHubStatus';
 import { rotuloBandeira } from '../../services/contaMes';
-import { diaMes } from '../../services/ciclo';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
 import { useRecarregar } from '../../hooks/useRecarregar';
+import { useT } from '../../i18n/IdiomaContext';
+import { diaMesCurto, num, reais } from '../../i18n';
 
 interface DashboardScreenProps {
   navigation: any;
@@ -24,6 +25,7 @@ function DashboardConteudo({
 }: DashboardScreenProps & { refreshControl: React.ReactElement<any> }) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  const t = useT();
   const { hubId, loading: hubLoading } = useCurrentHub();
   const {
     currentWatts,
@@ -50,12 +52,10 @@ function DashboardConteudo({
         <AppHeader />
         <View style={styles.emptyState}>
           <MaterialIcons name="sensors-off" size={48} color={colors.onSurfaceVariant} />
-          <Text style={styles.emptyTitle}>Nenhum dispositivo pareado</Text>
-          <Text style={styles.emptySubtitle}>
-            Adicione o seu hub pra começar a ver os dados de consumo aqui.
-          </Text>
+          <Text style={styles.emptyTitle}>{t('comum.semHubTitulo')}</Text>
+          <Text style={styles.emptySubtitle}>{t('inicio.semHubTexto')}</Text>
           <TouchableOpacity style={styles.emptyButton} onPress={() => navigation.navigate('AddDevice')}>
-            <Text style={styles.emptyButtonText}>Adicionar Dispositivo</Text>
+            <Text style={styles.emptyButtonText}>{t('comum.adicionarDispositivo')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -66,15 +66,14 @@ function DashboardConteudo({
   // Barra de progresso: quanto da conta projetada do mês já foi consumido.
   const progressPercent =
     projectedBill !== null && projectedBill > 0 ? Math.min(100, (estimatedBill / projectedBill) * 100) : 0;
-  const projectedValue =
-    projectedBill !== null ? `R$ ${projectedBill.toFixed(2).replace('.', ',')}` : 'após 24h de medição';
+  const projectedValue = projectedBill !== null ? reais(projectedBill) : t('inicio.apos24h');
   // Com o ciclo da conta informado em Ajustes, a conta vai da última leitura
   // até a próxima; senão, é o mês do calendário.
   const ciclo = periodo.tipo === 'ciclo';
-  const cicloLabel = ciclo ? `Ciclo ${diaMes(periodo.inicio)} a ${diaMes(periodo.fim)} · ` : '';
+  const cicloLabel = ciclo ? t('inicio.ciclo', { inicio: diaMesCurto(periodo.inicio), fim: diaMesCurto(periodo.fim) }) : '';
   const projectedLabel = ciclo
-    ? `Projetado até ${diaMes(periodo.fim)}${periodo.estimado ? ' (estimado)' : ''}`
-    : 'Projetado';
+    ? t('inicio.projetadoAte', { data: diaMesCurto(periodo.fim) }) + (periodo.estimado ? t('inicio.estimado') : '')
+    : t('inicio.projetado');
 
   return (
     <View style={styles.screen}>
@@ -82,8 +81,8 @@ function DashboardConteudo({
       <ScrollView contentContainerStyle={styles.content} refreshControl={refreshControl}>
         <View style={styles.welcomeRow}>
           <View>
-            <Text style={styles.welcomeSubtitle}>Bem-vindo de volta</Text>
-            <Text style={styles.welcomeTitle}>Visão Geral</Text>
+            <Text style={styles.welcomeSubtitle}>{t('inicio.bemVindo')}</Text>
+            <Text style={styles.welcomeTitle}>{t('inicio.visaoGeral')}</Text>
           </View>
         </View>
 
@@ -97,11 +96,11 @@ function DashboardConteudo({
         />
 
         <BillEstimateCard
-          currentValue={estimatedBill.toFixed(2).replace('.', ',')}
+          currentValue={num(estimatedBill)}
           projectedValue={projectedValue}
           billingCycleLabel={
             cicloLabel +
-            `Tarifa: R$ ${tariff.toFixed(2).replace('.', ',')}/kWh` +
+            t('inicio.tarifa', { valor: reais(tariff) }) +
             (rotuloBandeira(bandeira) ? ` · ${rotuloBandeira(bandeira)}` : '')
           }
           projectedLabel={projectedLabel}
@@ -114,24 +113,24 @@ function DashboardConteudo({
             icon="today"
             iconBackground={colors.secondaryFixed}
             iconColor={colors.onSecondaryFixed}
-            label="Hoje"
-            value={todayKwh.toFixed(1)}
+            label={t('comum.hoje')}
+            value={num(todayKwh, 1)}
             unit="kWh"
           />
           <StatCard
             icon="calendar-month"
             iconBackground={colors.primaryFixed}
             iconColor={colors.onPrimaryFixed}
-            label={ciclo ? 'Este Ciclo' : 'Este Mês'}
-            value={monthKwh.toFixed(1)}
+            label={t(ciclo ? 'inicio.esteCiclo' : 'inicio.esteMes')}
+            value={num(monthKwh, 1)}
             unit="kWh"
           />
           <StatCard
             icon="speed"
             iconBackground={colors.surfaceVariant}
             iconColor={colors.primary}
-            label="Pico de Demanda"
-            value={(peakWatts / 1000).toFixed(2)}
+            label={t('inicio.pico')}
+            value={num(peakWatts / 1000)}
             unit="kW"
           />
         </View>

@@ -3,6 +3,7 @@ import { FlexWidget, TextWidget, SvgWidget } from 'react-native-android-widget';
 import { ACAO_ATUALIZAR } from './tipos';
 import type { EstadoWidget, Situacao } from './tipos';
 import { rotuloBandeira } from '../services/contaMes';
+import { t as traduzir, num, hora } from '../i18n';
 
 // Widget "Conta do mês" da tela inicial do Android. Mesmo visual do card
 // "Conta Estimada" do Dashboard. Widgets não podem usar View/Text nem
@@ -13,8 +14,11 @@ const TEXTO = '#ffffff';
 const TEXTO_SUAVE = '#dfe3ff';
 const TRILHO = '#4d86ff'; // branco 30% sobre o azul
 
+// Textos no idioma do app (o widgetTaskHandler carrega o idioma salvo antes
+// de desenhar, porque roda com o app fechado)
+
 function numero(valor: number): string {
-  return valor.toFixed(2).replace('.', ',');
+  return num(valor);
 }
 
 function reais(valor: number): string {
@@ -23,15 +27,11 @@ function reais(valor: number): string {
 
 /** "Atualizado 09:52" / "Atualizando…" / "De 09:19 · falhou 09:52" */
 function textoRodape(atualizadoEm: number, situacao?: Situacao): string {
-  if (situacao?.tipo === 'atualizando') return 'Atualizando…';
-  if (situacao?.tipo === 'falhou') return `De ${hora(atualizadoEm)} · falhou ${hora(situacao.em)}`;
-  return `Atualizado ${hora(atualizadoEm)}`;
-}
-
-function hora(ms: number): string {
-  const d = new Date(ms);
-  const p = (n: number) => String(n).padStart(2, '0');
-  return `${p(d.getHours())}:${p(d.getMinutes())}`;
+  if (situacao?.tipo === 'atualizando') return traduzir('widget.atualizando');
+  if (situacao?.tipo === 'falhou') {
+    return traduzir('widget.falhou', { de: hora(atualizadoEm), em: hora(situacao.em) });
+  }
+  return traduzir('widget.atualizado', { hora: hora(atualizadoEm) });
 }
 
 // Carteira do card do Dashboard (ícone "account_balance_wallet" do Material
@@ -81,7 +81,7 @@ export function ContaWidget({ estado, largura = 260, altura = ALTURA_BASE }: Pro
       <FlexWidget
         style={{ width: 'match_parent', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
       >
-        <TextWidget text="Conta Estimada" style={{ fontSize: t(16), color: TEXTO_SUAVE }} />
+        <TextWidget text={traduzir('conta.estimada')} style={{ fontSize: t(16), color: TEXTO_SUAVE }} />
         <SvgWidget svg={CARTEIRA} style={{ width: t(20), height: t(20) }} />
       </FlexWidget>
       {estado.tipo === 'aviso' ? (
@@ -129,7 +129,7 @@ function Conta({
   const pct = projetada !== null && projetada > 0 ? Math.round(Math.min(100, (estimada / projetada) * 100)) : 0;
   // Mesma linha do card do Dashboard: "Tarifa: R$ 1,03/kWh · Bandeira Verde"
   const rotulo = rotuloBandeira(bandeira);
-  const linhaTarifa = `Tarifa: ${reais(tarifa)}/kWh` + (rotulo ? ` · ${rotulo}` : '');
+  const linhaTarifa = traduzir('inicio.tarifa', { valor: reais(tarifa) }) + (rotulo ? ` · ${rotulo}` : '');
   const barra = Math.max(4, t(6));
 
   return (
@@ -151,9 +151,9 @@ function Conta({
           marginTop: t(8),
         }}
       >
-        <TextWidget text="Projetado" style={{ fontSize: t(14), color: TEXTO_SUAVE }} />
+        <TextWidget text={traduzir('inicio.projetado')} style={{ fontSize: t(14), color: TEXTO_SUAVE }} />
         <TextWidget
-          text={projetada !== null ? reais(projetada) : 'após 24h'}
+          text={projetada !== null ? reais(projetada) : traduzir('widget.apos24h')}
           style={{ fontSize: t(14), fontWeight: '700', color: TEXTO }}
         />
       </FlexWidget>
@@ -186,7 +186,10 @@ function Conta({
         {situacao?.tipo === 'semInternet' ? (
           <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
             <SvgWidget svg={SEM_WIFI} style={{ width: t(16), height: t(16), marginRight: t(6) }} />
-            <TextWidget text="Sem conexão com a internet" style={{ fontSize: t(12), fontWeight: '700', color: TEXTO }} />
+            <TextWidget
+              text={traduzir('comum.semInternet')}
+              style={{ fontSize: t(12), fontWeight: '700', color: TEXTO }}
+            />
           </FlexWidget>
         ) : (
           <TextWidget text={textoRodape(atualizadoEm, situacao)} style={{ fontSize: t(12), color: TEXTO_SUAVE }} />
@@ -194,13 +197,16 @@ function Conta({
         {/* Toque aqui atualiza sem abrir o app (o resto do widget abre o app) */}
         <FlexWidget clickAction={ACAO_ATUALIZAR} style={{ paddingLeft: t(10), paddingVertical: t(2) }}>
           <TextWidget
-            text={situacao?.tipo === 'semInternet' ? '↻' : '↻ Atualizar'}
+            text={situacao?.tipo === 'semInternet' ? '↻' : traduzir('widget.atualizar')}
             style={{ fontSize: t(12), fontWeight: '700', color: TEXTO }}
           />
         </FlexWidget>
       </FlexWidget>
       {situacao?.tipo === 'falhou' ? (
-        <TextWidget text={`Motivo: ${situacao.motivo}`} style={{ fontSize: t(11), color: TEXTO_SUAVE }} />
+        <TextWidget
+          text={traduzir('widget.motivo', { motivo: situacao.motivo })}
+          style={{ fontSize: t(11), color: TEXTO_SUAVE }}
+        />
       ) : null}
     </FlexWidget>
   );

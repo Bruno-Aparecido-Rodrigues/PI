@@ -1,6 +1,7 @@
 import { getDatabase, ref, onValue, update, get, set } from 'firebase/database';
 import { app } from './authIntegration';
-import { getAlertTemplate } from '../constants/alertMessages';
+import { getAlertTemplate, AlertTemplate } from '../constants/alertMessages';
+import { idioma } from '../i18n';
 
 const db = getDatabase(app);
 
@@ -13,6 +14,7 @@ const db = getDatabase(app);
 //      timestamp: number,    // ms desde 1970
 //      read: boolean,        // se o usuário já visualizou
 //      detalhe?: string      // texto da notificação, com os números do momento
+//      detalheEn?: string    // o mesmo texto em inglês
 //    }
 //
 // Quem grava aqui é o ESP32 (ou uma Cloud Function que analisa as leituras)
@@ -22,16 +24,27 @@ const db = getDatabase(app);
 export interface Alert {
   id: string;
   templateId: string;
-  title: string;
-  description: string;
   timestamp: number;
   read: boolean;
   /** Texto da notificação (com os números do momento). Alertas antigos não têm. */
   detalhe: string | null;
-  /** O que a pessoa pode fazer a respeito */
-  oQueFazer: string;
-  /** Ícone do MaterialIcons */
-  icone: string;
+  /** O mesmo texto em inglês. Alertas de antes da versão em inglês não têm. */
+  detalheEn: string | null;
+}
+
+/**
+ * Título, descrição, ícone e "o que fazer" do alerta no idioma atual, mais o
+ * detalhe com os números do momento (ou a descrição padrão, se não houver).
+ * Chame na hora de desenhar, pra trocar junto com o idioma do app.
+ */
+export function textosDoAlerta(alert: Alert): AlertTemplate & { detalhe: string } {
+  const template = getAlertTemplate(alert.templateId);
+  const detalhe = idioma() === 'en' ? alert.detalheEn : alert.detalhe;
+  return { ...template, detalhe: detalhe ?? template.description };
+}
+
+function texto(v: unknown): string | null {
+  return typeof v === 'string' && v ? v : null;
 }
 
 /** Observa todos os alertas de um hub em tempo real, do mais recente pro mais antigo. */
@@ -42,17 +55,13 @@ export function subscribeToAlerts(hubId: string, callback: (alerts: Alert[]) => 
     snapshot.forEach((child) => {
       const value = child.val();
       if (typeof value?.templateId === 'string' && typeof value?.timestamp === 'number') {
-        const template = getAlertTemplate(value.templateId);
         alerts.push({
           id: child.key as string,
           templateId: value.templateId,
-          title: template.title,
-          description: template.description,
           timestamp: value.timestamp,
           read: Boolean(value.read),
-          detalhe: typeof value?.detalhe === 'string' && value.detalhe ? value.detalhe : null,
-          oQueFazer: template.oQueFazer,
-          icone: template.icone,
+          detalhe: texto(value.detalhe),
+          detalheEn: texto(value.detalheEn),
         });
       }
     });

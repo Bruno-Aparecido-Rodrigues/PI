@@ -75,6 +75,9 @@
             "detalhe": {
               ".validate": "newData.isString() && newData.val().length <= 300"
             },
+            "detalheEn": {
+              ".validate": "newData.isString() && newData.val().length <= 300"
+            },
             "$other": {
               ".validate": false
             }
@@ -137,7 +140,10 @@
     "users": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid"
+        ".write": "auth != null && auth.uid === $uid",
+        "idioma": {
+          ".validate": "newData.val() === 'pt' || newData.val() === 'en'"
+        }
       }
     },
     "pushTokens": {

@@ -1,6 +1,7 @@
 import { getDatabase, ref, onValue, update } from 'firebase/database';
 import { app } from './authIntegration';
 import { CicloConfig, cicloDeSettings } from './ciclo';
+import { t } from '../i18n';
 
 const db = getDatabase(app);
 
@@ -135,7 +136,7 @@ export function calcularTarifaFinal(
 ): number {
   const impostos = (icms + pisCofins) / 100;
   if (impostos < 0 || impostos >= 0.9) {
-    throw new Error('Percentual de impostos inválido.');
+    throw new Error(t('tarifa.impostosInvalidos'));
   }
   return (tarifaKwh + bandeiraAdicionalKwh) / (1 - impostos);
 }
@@ -291,12 +292,12 @@ async function consultarAneel(parametros: Record<string, unknown>): Promise<Reco
       body: JSON.stringify(parametros),
       signal: controle.signal,
     });
-    if (!resposta.ok) throw new Error(`A ANEEL respondeu com erro ${resposta.status}.`);
+    if (!resposta.ok) throw new Error(t('tarifa.aneelErro', { status: resposta.status }));
     const json = await resposta.json();
-    if (!json?.success) throw new Error('A consulta à ANEEL não deu certo.');
+    if (!json?.success) throw new Error(t('tarifa.aneelFalhou'));
     return json.result?.records ?? [];
   } catch (erro: any) {
-    if (erro?.name === 'AbortError') throw new Error('A ANEEL demorou demais pra responder.');
+    if (erro?.name === 'AbortError') throw new Error(t('tarifa.aneelDemorou'));
     throw erro;
   } finally {
     clearTimeout(tempo);
@@ -373,14 +374,14 @@ async function buscarBandeira(): Promise<ReturnType<typeof escolherBandeira>> {
  * já salvos e grava tudo em /hubs/{hubId}/settings.
  */
 export async function atualizarTarifaAneel(hubId: string, config: ConfigTarifa): Promise<ConfigTarifa> {
-  if (!config.distribuidora) throw new Error('Escolha a distribuidora primeiro.');
+  if (!config.distribuidora) throw new Error(t('tarifa.escolhaPrimeiro'));
 
   const [tarifa, bandeira] = await Promise.all([
     buscarTarifa(config.distribuidora),
     buscarBandeira().catch(() => null), // sem bandeira, segue com a última conhecida
   ]);
   if (!tarifa) {
-    throw new Error('Não encontrei a tarifa residencial dessa distribuidora na ANEEL.');
+    throw new Error(t('tarifa.naoEncontrei'));
   }
 
   const aneel: DadosAneel = {

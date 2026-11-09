@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useT } from '../../i18n/IdiomaContext';
 
 export interface BarChartDatum {
   label: string;
@@ -22,9 +23,10 @@ export function BarChart({
   data,
   barColor: barColorProp,
   valueFormatter = (v) => v.toFixed(1),
-  emptyLabel = 'Sem dados neste período.',
+  emptyLabel,
 }: BarChartProps) {
   const styles = useEstilos(criarEstilos);
+  const t = useT();
   const colors = useCores();
   const barColor = barColorProp ?? colors.primary;
   const maxValue = Math.max(...data.map((d) => d.value), 0);
@@ -32,7 +34,7 @@ export function BarChart({
   if (maxValue === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>{emptyLabel}</Text>
+        <Text style={styles.emptyText}>{emptyLabel ?? t('comum.semDados')}</Text>
       </View>
     );
   }

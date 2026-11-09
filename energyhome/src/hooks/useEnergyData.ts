@@ -12,6 +12,8 @@ import {
 import { calcularContaDoMes } from '../services/contaMes';
 import { periodoAtual } from '../services/ciclo';
 import { atualizarWidgetConta } from '../widget/atualizarWidget';
+import { t } from '../i18n';
+import { useIdioma } from '../i18n/IdiomaContext';
 import {
   ConfigTarifa,
   TARIFA_PADRAO,
@@ -159,6 +161,8 @@ export function useEnergyData(hubId: string | null) {
   const estimatedBill = conta.estimada;
   const projectedBill = conta.projetada;
   const bandeira = configTarifa?.modo === 'aneel' ? configTarifa.aneel?.bandeira ?? null : null;
+  // O widget redesenha no idioma novo quando a pessoa troca em Ajustes
+  const { idioma } = useIdioma();
 
   // Widget da tela inicial: atualiza na hora com os mesmos números do
   // Dashboard (só quando a conta muda, ~1x por minuto) e guarda o ponto de
@@ -176,7 +180,7 @@ export function useEnergyData(hubId: string | null) {
       periodoInicio: periodo.inicio,
       periodoFim: periodo.fim,
     });
-  }, [hubId, configTarifa, energy, tariff, cip, bandeira, periodo.inicio, periodo.fim]);
+  }, [hubId, configTarifa, energy, tariff, cip, bandeira, periodo.inicio, periodo.fim, idioma]);
 
   return {
     currentWatts,
@@ -198,20 +202,20 @@ export function useEnergyData(hubId: string | null) {
 /** Compara o consumo de agora com a média do mesmo horário nos últimos dias. */
 function describeTrend(currentWatts: number | null, typicalWatts: number | null): { trend: Trend; trendLabel: string } {
   if (currentWatts === null) {
-    return { trend: 'neutral', trendLabel: 'Aguardando leitura do Hub…' };
+    return { trend: 'neutral', trendLabel: t('aoVivo.aguardando') };
   }
   if (typicalWatts === null || typicalWatts <= 0) {
-    return { trend: 'neutral', trendLabel: 'Leitura em tempo real do Hub' };
+    return { trend: 'neutral', trendLabel: t('aoVivo.tempoReal') };
   }
 
   const difference = (currentWatts - typicalWatts) / typicalWatts;
   const percent = Math.round(Math.abs(difference) * 100);
 
   if (Math.abs(difference) < TREND_TOLERANCE) {
-    return { trend: 'neutral', trendLabel: 'Dentro do normal para este horário' };
+    return { trend: 'neutral', trendLabel: t('aoVivo.normal') };
   }
   if (difference > 0) {
-    return { trend: 'up', trendLabel: `${percent}% acima do normal para este horário` };
+    return { trend: 'up', trendLabel: t('aoVivo.acima', { pct: percent }) };
   }
-  return { trend: 'down', trendLabel: `${percent}% abaixo do normal para este horário` };
+  return { trend: 'down', trendLabel: t('aoVivo.abaixo', { pct: percent }) };
 }

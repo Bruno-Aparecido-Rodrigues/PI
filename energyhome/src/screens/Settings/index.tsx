@@ -1,23 +1,33 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { CicloCard } from '../../components/CicloCard';
 import { AppHeader } from '../../components/AppHeader';
 import { logout, deleteAccount, getCurrentUser } from '../../services/authIntegration';
 import { TarifaCard } from '../../components/TarifaCard';
+import { CicloCard } from '../../components/CicloCard';
 import { unpairHub } from '../../services/hubPairing';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import { criarEstilos } from './style';
 import { useCores, useEstilos, useTema } from '../../theme/TemaContext';
+import { useIdioma } from '../../i18n/IdiomaContext';
+import type { EscolhaIdioma } from '../../i18n';
 
 interface SettingsScreenProps {
   navigation: any;
 }
 
+// Cada idioma aparece escrito nele mesmo (quem não lê português acha o "English")
+const OPCOES_IDIOMA: { id: EscolhaIdioma; nome: string | null }[] = [
+  { id: 'auto', nome: null }, // "Automático" / "Automatic"
+  { id: 'pt', nome: 'Português' },
+  { id: 'en', nome: 'English' },
+];
+
 export function SettingsScreen({ navigation }: SettingsScreenProps) {
   const styles = useEstilos(criarEstilos);
   const { escuro, definirEscuro } = useTema();
   const colors = useCores();
+  const { t, escolha: escolhaIdioma, definirIdioma } = useIdioma();
   const { hubId, loading: hubLoading } = useCurrentHub();
   const [confirmingDisconnect, setConfirmingDisconnect] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -42,11 +52,9 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
 
     try {
       await unpairHub(user.uid, hubId);
-      setFeedback(
-        'Dispositivo desconectado. O histórico fica guardado por 6 meses: se o hub for pareado de novo nesse prazo, os dados continuam; depois disso, são apagados.'
-      );
+      setFeedback(t('ajustes.desconectado'));
     } catch {
-      setFeedback('Não foi possível desconectar o dispositivo. Tente novamente.');
+      setFeedback(t('ajustes.erroDesconectar'));
     } finally {
       setConfirmingDisconnect(false);
     }
@@ -72,11 +80,54 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
     <View style={styles.screen}>
       <AppHeader />
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Ajustes</Text>
-        <Text style={styles.subtitle}>Gerencie suas preferências de energia e conexões da conta.</Text>
+        <Text style={styles.title}>{t('ajustes.titulo')}</Text>
+        <Text style={styles.subtitle}>{t('ajustes.subtitulo')}</Text>
 
         {feedback ? <Text style={styles.feedbackText}>{feedback}</Text> : null}
-        
+
+        {/* Aparência: tema claro ou escuro (vale na hora, fica salvo no celular) */}
+        <View style={styles.card}>
+          <View style={styles.temaRow}>
+            <View style={styles.cardHeader}>
+              <MaterialIcons name={escuro ? 'dark-mode' : 'light-mode'} size={20} color={colors.primary} />
+              <Text style={styles.cardTitle}>{t('ajustes.temaEscuro')}</Text>
+            </View>
+            <Switch
+              value={escuro}
+              onValueChange={definirEscuro}
+              trackColor={{ false: colors.outlineVariant, true: colors.primary }}
+              thumbColor={escuro ? colors.onPrimary : colors.surfaceContainerLowest}
+            />
+          </View>
+        </View>
+
+        {/* Idioma do app (e dos alertas/notificações). Vale na hora, fica salvo no celular */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <MaterialIcons name="translate" size={20} color={colors.primary} />
+            <Text style={styles.cardTitle}>{t('ajustes.idioma')}</Text>
+          </View>
+          <View style={styles.idiomaOpcoes}>
+            {OPCOES_IDIOMA.map((opcao) => {
+              const ativo = escolhaIdioma === opcao.id;
+              return (
+                <TouchableOpacity
+                  key={opcao.id}
+                  style={[styles.idiomaChip, ativo && styles.idiomaChipAtivo]}
+                  onPress={() => definirIdioma(opcao.id)}
+                  accessibilityState={{ selected: ativo }}
+                >
+                  <Text style={[styles.idiomaChipTexto, ativo && styles.idiomaChipTextoAtivo]}>
+                    {opcao.nome ?? t('ajustes.idiomaAuto')}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text style={styles.idiomaDica}>{t('ajustes.idiomaDica')}</Text>
+        </View>
+
+        {/* Datas de leitura da conta de luz (ciclo de faturamento) */}
         <CicloCard hubId={hubId} />
 
         {/* Tarifa manual ou automática (ANEEL), impostos e iluminação pública */}
@@ -86,10 +137,10 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
           <View style={styles.deviceHeaderRow}>
             <View style={styles.cardHeader}>
               <MaterialIcons name="router" size={20} color={colors.secondary} />
-              <Text style={styles.cardTitle}>Dispositivos Conectados</Text>
+              <Text style={styles.cardTitle}>{t('ajustes.dispositivos')}</Text>
             </View>
             <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText}>{hubId ? '1 Ativo' : '0 Ativos'}</Text>
+              <Text style={styles.activeBadgeText}>{hubId ? t('ajustes.umAtivo') : t('ajustes.zeroAtivos')}</Text>
             </View>
           </View>
 
@@ -101,13 +152,13 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
                     <MaterialIcons name="sensors" size={20} color={colors.onSurfaceVariant} />
                   </View>
                   <View>
-                    <Text style={styles.deviceLabel}>Hub</Text>
-                    <Text style={styles.deviceId}>ID: {hubId}</Text>
+                    <Text style={styles.deviceLabel}>{t('ajustes.hub')}</Text>
+                    <Text style={styles.deviceId}>{t('ajustes.id', { id: hubId })}</Text>
                   </View>
                 </View>
                 <TouchableOpacity onPress={handleDisconnect}>
                   <Text style={styles.disconnectText}>
-                    {confirmingDisconnect ? 'Confirmar?' : 'Desconectar'}
+                    {confirmingDisconnect ? t('ajustes.confirmar') : t('ajustes.desconectar')}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -118,47 +169,29 @@ export function SettingsScreen({ navigation }: SettingsScreenProps) {
                 disabled={hubLoading}
               >
                 <MaterialIcons name="add-circle-outline" size={20} color={colors.primary} />
-                <Text style={styles.addDeviceText}>Adicionar Dispositivo</Text>
+                <Text style={styles.addDeviceText}>{t('comum.adicionarDispositivo')}</Text>
               </TouchableOpacity>
             )}
-          </View>
-        </View>
-
-        {/* Aparência: tema claro ou escuro (vale na hora, fica salvo no celular) */}
-        <View style={styles.card}>
-          <View style={styles.temaRow}>
-            <View style={styles.cardHeader}>
-              <MaterialIcons name={escuro ? 'dark-mode' : 'light-mode'} size={20} color={colors.primary} />
-              <Text style={styles.cardTitle}>Tema escuro</Text>
-            </View>
-            <Switch
-              value={escuro}
-              onValueChange={definirEscuro}
-              trackColor={{ false: colors.outlineVariant, true: colors.primary }}
-              thumbColor={escuro ? colors.onPrimary : colors.surfaceContainerLowest}
-            />
           </View>
         </View>
 
         <View style={[styles.card, styles.dangerCard]}>
           <View style={styles.cardHeader}>
             <MaterialIcons name="warning" size={20} color={colors.error} />
-            <Text style={[styles.cardTitle, { color: colors.error }]}>Zona de Perigo</Text>
+            <Text style={[styles.cardTitle, { color: colors.error }]}>{t('ajustes.perigo')}</Text>
           </View>
-          <Text style={styles.dangerText}>
-            Remover sua conta apagará permanentemente todo o histórico de dados.
-          </Text>
+          <Text style={styles.dangerText}>{t('ajustes.perigoTexto')}</Text>
           {deleteError ? <Text style={styles.dangerErrorText}>{deleteError}</Text> : null}
           <TouchableOpacity style={styles.dangerButton} onPress={handleDeleteAccount}>
             <Text style={styles.dangerButtonText}>
-              {confirmingDelete ? 'Confirmar exclusão' : 'Excluir Conta'}
+              {confirmingDelete ? t('ajustes.confirmarExclusao') : t('ajustes.excluir')}
             </Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <MaterialIcons name="logout" size={18} color={colors.onSurfaceVariant} />
-          <Text style={styles.logoutText}>Sair</Text>
+          <Text style={styles.logoutText}>{t('ajustes.sair')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

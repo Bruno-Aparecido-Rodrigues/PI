@@ -21,6 +21,7 @@ import { subscribeToAuthChanges } from '../services/authIntegration';
 import { getUserHubs } from '../services/hubPairing';
 import { aoTocarNotificacao } from '../services/pushNotifications';
 import { useCores, useTema } from '../theme/TemaContext';
+import { useT } from '../i18n/IdiomaContext';
 
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -103,6 +104,7 @@ function useAuthState(): AuthState {
 export function AppNavigator() {
   const colors = useCores();
   const { escuro } = useTema();
+  const t = useT();
   const semInternet = useSemInternet();
   // Fundo das telas e das transições no tema atual (sem piscar branco no escuro)
   const base = escuro ? DarkTheme : DefaultTheme;
@@ -146,9 +148,9 @@ export function AppNavigator() {
         {semInternet ? (
           <View style={{ alignItems: 'center', marginTop: 20, paddingHorizontal: 32, gap: 6 }}>
             <MaterialIcons name="wifi-off" size={28} color={colors.error} />
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.onSurface }}>Sem conexão com a internet</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.onSurface }}>{t('comum.semInternet')}</Text>
             <Text style={{ fontSize: 13, color: colors.onSurfaceVariant, textAlign: 'center' }}>
-              Tentando conectar… Os dados aparecem assim que a conexão voltar.
+              {t('comum.semInternetTentando')}
             </Text>
           </View>
         ) : null}

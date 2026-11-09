@@ -5,6 +5,8 @@ import { ChartCurve } from '../ChartCurve';
 import { criarEstilos } from './style';
 import type { AppColors } from '../../constants/colors';
 import { useCores, useEstilos } from '../../theme/TemaContext';
+import { useT } from '../../i18n/IdiomaContext';
+import { t as traduzir, diaMesCurto, hora as horaDe } from '../../i18n';
 
 interface PowerUsageCardProps {
   watts: number;
@@ -23,12 +25,11 @@ interface PowerUsageCardProps {
 
 function quandoFoi(ms: number): string {
   const d = new Date(ms);
-  const p = (n: number) => String(n).padStart(2, '0');
-  const hora = `${p(d.getHours())}:${p(d.getMinutes())}`;
+  const hora = horaDe(ms);
   const hoje = new Date();
   const mesmoDia =
     d.getDate() === hoje.getDate() && d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear();
-  return mesmoDia ? `às ${hora}` : `em ${p(d.getDate())}/${p(d.getMonth() + 1)} às ${hora}`;
+  return mesmoDia ? traduzir('aoVivo.as', { hora }) : traduzir('aoVivo.em', { data: diaMesCurto(ms), hora });
 }
 
 const TREND_ICON = {
@@ -52,6 +53,7 @@ export function PowerUsageCard({
 }: PowerUsageCardProps) {
   const styles = useEstilos(criarEstilos);
   const colors = useCores();
+  const t = useT();
   if (offline) {
     return (
       <View style={styles.container}>
@@ -59,7 +61,7 @@ export function PowerUsageCard({
           <Text style={[styles.liveBadgeText, styles.offlineBadgeText]}>OFFLINE</Text>
         </View>
 
-        <Text style={styles.label}>Consumo Atual</Text>
+        <Text style={styles.label}>{t('aoVivo.consumoAtual')}</Text>
         <View style={styles.valueRow}>
           <Text style={[styles.value, styles.valueOffline]}>—</Text>
         </View>
@@ -68,18 +70,15 @@ export function PowerUsageCard({
           <MaterialIcons name="sensors-off" size={16} color={colors.error} />
           <Text style={[styles.trendText, { color: colors.error }]}>
             {lastUpdatedAt
-              ? `Hub desconectado · última leitura ${quandoFoi(lastUpdatedAt)}`
-              : 'Aguardando a primeira leitura do hub'}
+              ? t('aoVivo.desconectado', { quando: quandoFoi(lastUpdatedAt) })
+              : t('aoVivo.aguardandoPrimeira')}
           </Text>
         </View>
 
         <View style={styles.offlineBox}>
           <MaterialIcons name="power-off" size={28} color={colors.onSurfaceVariant} />
-          <Text style={styles.offlineTitle}>Sem consumo ao vivo</Text>
-          <Text style={styles.offlineText}>
-            O hub não está enviando leituras. Confira se ele está ligado na tomada e se o Wi-Fi está
-            funcionando. O consumo volta a aparecer aqui sozinho quando ele reconectar.
-          </Text>
+          <Text style={styles.offlineTitle}>{t('aoVivo.semConsumo')}</Text>
+          <Text style={styles.offlineText}>{t('aoVivo.offlineTexto')}</Text>
         </View>
       </View>
     );
@@ -91,7 +90,7 @@ export function PowerUsageCard({
         <Text style={styles.liveBadgeText}>LIVE</Text>
       </View>
 
-      <Text style={styles.label}>Consumo Atual</Text>
+      <Text style={styles.label}>{t('aoVivo.consumoAtual')}</Text>
       <View style={styles.valueRow}>
         <Text style={styles.value}>{watts}</Text>
         <Text style={styles.unit}>W</Text>

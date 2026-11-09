@@ -14,6 +14,8 @@
 // Funções puras (sem Firebase): usadas pelo app e pelo widget.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { t } from '../i18n';
+
 const DIA_MS = 24 * 60 * 60 * 1000;
 export const MIN_DIAS_CICLO = 15;
 export const MAX_DIAS_CICLO = 45;
@@ -110,11 +112,11 @@ export function mascaraData(texto: string): string {
 export function validarCiclo(ultimaTexto: string, proximaTexto: string): CicloConfig | string {
   const ultima = lerData(ultimaTexto);
   const proxima = lerData(proximaTexto);
-  if (ultima === null || proxima === null) return 'Digite as datas no formato DD/MM/AAAA.';
+  if (ultima === null || proxima === null) return t('ciclo.erroFormato');
   const dias = Math.round((proxima - ultima) / DIA_MS);
-  if (dias <= 0) return 'A próxima leitura tem que ser depois da última.';
+  if (dias <= 0) return t('ciclo.erroOrdem');
   if (dias < MIN_DIAS_CICLO || dias > MAX_DIAS_CICLO) {
-    return `Um ciclo costuma ter de 27 a 33 dias (esse tem ${dias}). Confira as datas na conta.`;
+    return t('ciclo.erroDias', { dias });
   }
   return { ultimaLeitura: ultima, proximaLeitura: proxima };
 }

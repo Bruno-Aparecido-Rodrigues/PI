@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { getApp } from 'firebase/app';
 import { getDatabase, ref, set, get, remove } from 'firebase/database';
+import { t } from '../i18n';
 
 // Quem gera os alertas e manda as notificações é o Worker da Cloudflare
 // (pasta alertas-worker). O app só registra o "endereço" de notificação
@@ -41,7 +42,7 @@ export async function registerForPushNotifications(uid: string): Promise<void> {
       // Criar o canal antes de pedir permissão: no Android 13+ é isso que
       // faz aparecer o pedido de permissão.
       await Notifications.setNotificationChannelAsync(CANAL_ALERTAS, {
-        name: 'Alertas de consumo',
+        name: t('alertas.canal'),
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#0052ff',

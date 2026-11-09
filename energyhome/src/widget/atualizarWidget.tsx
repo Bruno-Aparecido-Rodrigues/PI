@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import type { PowerReading } from '../services/energyData';
 import { NOME_WIDGET, EstadoWidget } from './tipos';
 import { CacheConta, competenciaDe, salvarCache, apagarCache, estadoDoCache } from './cacheConta';
+import { t } from '../i18n';
 
 // Ponte entre o app aberto e o widget: atualiza o widget na hora e guarda o
 // cache que ele usa com o app fechado. Só Android; no Expo Go (sem a parte
@@ -50,5 +51,5 @@ export function atualizarWidgetConta(dados: {
 export async function limparWidgetConta() {
   if (Platform.OS !== 'android') return;
   await apagarCache();
-  desenhar({ tipo: 'aviso', mensagem: 'Entre no app A.C.D.C pra ver sua conta.' });
+  desenhar({ tipo: 'aviso', mensagem: t('widget.entre') });
 }
