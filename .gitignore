@@ -5,6 +5,10 @@ node_modules/
 .expo/
 .expo-shared/
 
+# pastas com coisas importantes
+scripts/seed*.mjs
+energyhome/src/constants/googleAuth.ts
+
 # Build
 dist/
 web-build/
