@@ -42,9 +42,11 @@ function DashboardConteudo({
     periodo,
   } = useEnergyData(hubId);
   // Hub sem mandar leitura (desligado, sem energia ou sem Wi-Fi): o card ao
-  // vivo mostra o aviso em vez do último valor, que já não vale mais.
+  // vivo mostra o aviso em vez do último valor, que já não vale mais. Se o
+  // sem internet for o celular, o aviso é outro (não dá pra culpar o hub).
   const hubStatus = useHubStatus(hubId);
-  const hubOffline = hubStatus.loaded && !hubStatus.online;
+  const situacaoAoVivo =
+    hubStatus.situacao === 'offline' && !hubStatus.loaded ? 'online' : hubStatus.situacao;
 
   if (!hubLoading && !hubId) {
     return (
@@ -91,7 +93,8 @@ function DashboardConteudo({
           comparisonLabel={trendLabel}
           trend={trend}
           history={wattsHistory}
-          offline={hubOffline}
+          situacao={situacaoAoVivo}
+          celularConectado={hubStatus.celularConectado}
           lastUpdatedAt={hubStatus.lastUpdatedAt}
         />
 

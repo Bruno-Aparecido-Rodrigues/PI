@@ -68,22 +68,33 @@ export const criarEstilos = (colors: AppColors) =>
   offlineBadgeText: {
     color: colors.onErrorContainer,
   },
+  // Celular sem internet: situação do hub desconhecida (cinza)
+  desconhecidoBadge: {
+    backgroundColor: `${colors.outline}26`,
+  },
+  desconhecidoBadgeText: {
+    color: colors.onSurfaceVariant,
+  },
   valueOffline: {
     color: colors.outline,
   },
+  // Altura mínima (não fixa): com o texto do aviso em 3-4 linhas, ou em
+  // inglês, ou com a fonte do celular maior, a caixa cresce em vez de vazar
   offlineBox: {
-    height: 140,
+    minHeight: 140,
     marginTop: 12,
     borderRadius: 8,
     backgroundColor: colors.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 20,
+    paddingVertical: 16,
     gap: 6,
   },
   offlineTitle: {
     fontSize: 15,
     fontWeight: '700',
+    textAlign: 'center',
     color: colors.onSurface,
   },
   offlineText: {

@@ -65,4 +65,14 @@ export const criarEstilos = (colors: AppColors) =>
   statusTextOffline: {
     color: colors.error,
   },
+  // Celular sem internet: não dá pra saber como o hub está
+  statusPillDesconhecido: {
+    backgroundColor: `${colors.outline}26`,
+  },
+  statusDotDesconhecido: {
+    backgroundColor: colors.outline,
+  },
+  statusTextDesconhecido: {
+    color: colors.onSurfaceVariant,
+  },
 });

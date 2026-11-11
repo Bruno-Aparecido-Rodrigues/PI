@@ -91,6 +91,8 @@ export const pt = {
   // ─── Topo ─────────────────────────────────────────────────────────────
   'topo.hubConectado': 'Hub Conectado',
   'topo.hubDesconectado': 'Hub Desconectado',
+  'topo.hubDesconhecido': 'Situação desconhecida',
+  'topo.verificando': 'Verificando…',
   'topo.testeAtivado': 'Modo de teste: alertas de consumo ativados (vale na próxima rodada, até 5 min).',
   'topo.aprendizadoReiniciado': 'Período de aprendizado reiniciado: 30 dias sem alertas de consumo.',
   'topo.erroTeste': 'Não foi possível mudar o modo de teste.',
@@ -116,6 +118,14 @@ export const pt = {
   'aoVivo.semConsumo': 'Sem consumo ao vivo',
   'aoVivo.offlineTexto':
     'O hub não está enviando leituras. Confira se ele está ligado na tomada e se o Wi-Fi está funcionando. O consumo volta a aparecer aqui sozinho quando ele reconectar.',
+  'aoVivo.badgeSemInternet': 'SEM INTERNET',
+  'aoVivo.celularSemInternet': 'Celular sem internet · última leitura {quando}',
+  'aoVivo.celularSemInternetCurto': 'Celular sem internet',
+  'aoVivo.desconhecidoTitulo': 'Situação do hub desconhecida',
+  'aoVivo.desconhecidoTexto':
+    'Seu celular está sem internet, então não dá pra saber se o hub está ligado. A leitura ao vivo volta sozinha quando a conexão voltar.',
+  'aoVivo.verificandoTitulo': 'Verificando o hub…',
+  'aoVivo.verificandoTexto': 'A internet do celular acabou de voltar. Em alguns segundos a leitura ao vivo aparece.',
   'aoVivo.as': 'às {hora}',
   'aoVivo.em': 'em {data} às {hora}',
   'aoVivo.aguardando': 'Aguardando leitura do Hub…',
@@ -412,6 +422,8 @@ export const en: Record<Chave, string> = {
   // ─── Header ───────────────────────────────────────────────────────────
   'topo.hubConectado': 'Hub Connected',
   'topo.hubDesconectado': 'Hub Disconnected',
+  'topo.hubDesconhecido': 'Status unknown',
+  'topo.verificando': 'Checking…',
   'topo.testeAtivado': 'Test mode: usage alerts turned on (takes effect on the next run, up to 5 min).',
   'topo.aprendizadoReiniciado': 'Learning period restarted: 30 days without usage alerts.',
   'topo.erroTeste': 'Could not change the test mode.',
@@ -437,6 +449,14 @@ export const en: Record<Chave, string> = {
   'aoVivo.semConsumo': 'No live usage',
   'aoVivo.offlineTexto':
     "The hub isn't sending readings. Make sure it's plugged in and that the Wi-Fi is working. Usage will show up here again on its own once it reconnects.",
+  'aoVivo.badgeSemInternet': 'NO INTERNET',
+  'aoVivo.celularSemInternet': 'Phone offline · last reading {quando}',
+  'aoVivo.celularSemInternetCurto': 'Phone offline',
+  'aoVivo.desconhecidoTitulo': 'Hub status unknown',
+  'aoVivo.desconhecidoTexto':
+    "Your phone has no internet, so we can't tell whether the hub is on. Live usage will come back on its own once the connection is back.",
+  'aoVivo.verificandoTitulo': 'Checking the hub…',
+  'aoVivo.verificandoTexto': "Your phone's internet just came back. Live usage will show up in a few seconds.",
   'aoVivo.as': 'at {hora}',
   'aoVivo.em': 'on {data} at {hora}',
   'aoVivo.aguardando': 'Waiting for a reading from the Hub…',

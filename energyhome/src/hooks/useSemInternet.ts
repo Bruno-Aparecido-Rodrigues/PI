@@ -10,6 +10,9 @@ import { app } from '../services/authIntegration';
 const ESPERA_MS = 3000;
 
 let conectado = false;
+let jaConectou = false;
+/** Quando a conexão voltou depois de cair (0 = nunca caiu) */
+let reconectadoEm = 0;
 let iniciado = false;
 const ouvintes = new Set<(c: boolean) => void>();
 
@@ -17,9 +20,39 @@ function iniciar() {
   if (iniciado) return;
   iniciado = true;
   onValue(ref(getDatabase(app), '.info/connected'), (snap) => {
-    conectado = snap.val() === true;
+    const agora = snap.val() === true;
+    if (agora && !conectado && jaConectou) reconectadoEm = Date.now();
+    if (agora) jaConectou = true;
+    conectado = agora;
     ouvintes.forEach((f) => f(conectado));
   });
+}
+
+export interface ConexaoDoCelular {
+  /** O app está ligado ao Firebase agora (sem a espera do aviso) */
+  conectado: boolean;
+  /** Quando a conexão voltou depois de uma queda (0 = não caiu desde que o app abriu) */
+  reconectadoEm: number;
+}
+
+/**
+ * Conexão do celular com o banco, na hora, sem esperar. Usado pelo status do
+ * hub: sem internet no celular, não dá pra saber se o hub está ligado.
+ */
+export function useConexaoDoCelular(): ConexaoDoCelular {
+  const [estado, setEstado] = useState<ConexaoDoCelular>({ conectado, reconectadoEm });
+
+  useEffect(() => {
+    iniciar();
+    const avaliar = () => setEstado({ conectado, reconectadoEm });
+    avaliar();
+    ouvintes.add(avaliar);
+    return () => {
+      ouvintes.delete(avaliar);
+    };
+  }, []);
+
+  return estado;
 }
 
 export function useSemInternet(): boolean {

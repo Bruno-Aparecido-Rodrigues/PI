@@ -16,7 +16,28 @@ export function AppHeader() {
   const insets = useSafeAreaInsets();
   const t = useT();
   const { hubId } = useCurrentHub();
-  const { online } = useHubStatus(hubId);
+  const { situacao, celularConectado } = useHubStatus(hubId);
+  const pill = {
+    online: {
+      fundo: styles.statusPillOnline,
+      ponto: styles.statusDotOnline,
+      texto: styles.statusTextOnline,
+      rotulo: t('topo.hubConectado'),
+    },
+    offline: {
+      fundo: styles.statusPillOffline,
+      ponto: styles.statusDotOffline,
+      texto: styles.statusTextOffline,
+      rotulo: t('topo.hubDesconectado'),
+    },
+    // Sem internet no celular (ou recém-voltada): cinza, sem acusar o hub
+    desconhecido: {
+      fundo: styles.statusPillDesconhecido,
+      ponto: styles.statusDotDesconhecido,
+      texto: styles.statusTextDesconhecido,
+      rotulo: celularConectado ? t('topo.verificando') : t('topo.hubDesconhecido'),
+    },
+  }[situacao];
 
   // Atalho escondido pra apresentação: 7 toques seguidos no "A.C.D.C" ligam
   // ou desligam o período de aprendizado dos alertas (ver alertsData.ts).
@@ -49,11 +70,9 @@ export function AppHeader() {
 
       <View style={styles.right}>
         {hubId && (
-          <View style={[styles.statusPill, online ? styles.statusPillOnline : styles.statusPillOffline]}>
-            <View style={[styles.statusDot, online ? styles.statusDotOnline : styles.statusDotOffline]} />
-            <Text style={[styles.statusText, online ? styles.statusTextOnline : styles.statusTextOffline]}>
-              {online ? t('topo.hubConectado') : t('topo.hubDesconectado')}
-            </Text>
+          <View style={[styles.statusPill, pill.fundo]}>
+            <View style={[styles.statusDot, pill.ponto]} />
+            <Text style={[styles.statusText, pill.texto]}>{pill.rotulo}</Text>
           </View>
         )}
       </View>
