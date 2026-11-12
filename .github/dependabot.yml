@@ -1,0 +1,63 @@
+# Dependabot: abre pull requests com atualizações de dependências.
+# Cada PR passa pelo workflow "Dependências" (.github/workflows/dependencias.yml)
+# antes de poder ser aceito. Guia: docs/DEPENDENCIAS.md
+version: 2
+
+updates:
+  # ─── App (Expo / React Native) ──────────────────────────────────────────
+  - package-ecosystem: npm
+    directory: /energyhome
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(app)"
+    # Junta atualizações parecidas num PR só, pra não chegar um PR por pacote
+    groups:
+      expo-sdk:
+        # Correções dentro do mesmo SDK (ex.: expo-camera 57.0.6 -> 57.0.7)
+        patterns: ["expo", "expo-*", "@expo/*"]
+        update-types: ["patch"]
+      firebase:
+        patterns: ["firebase"]
+      navegacao:
+        patterns: ["@react-navigation/*"]
+      outras-correcoes:
+        update-types: ["patch"]
+    ignore:
+      # Versões que o SDK do Expo decide. Sobem todas juntas na troca de SDK
+      # (npx expo install expo@^58 && npx expo install --fix), nunca por PR.
+      - dependency-name: "react"
+      - dependency-name: "react-native"
+      - dependency-name: "react-native-safe-area-context"
+      - dependency-name: "react-native-screens"
+      - dependency-name: "react-native-svg"
+      - dependency-name: "@react-native-async-storage/async-storage"
+      - dependency-name: "@types/react"
+      - dependency-name: "typescript"
+      # Do próprio Expo: só correções (patch). Minor e major = troca de SDK
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: "@expo/*"
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      # Versão nova "major" de qualquer outro pacote pode quebrar o código:
+      # essas a equipe faz à mão, lendo o changelog
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # ─── As próprias actions dos workflows (checkout, setup-node…) ──────────
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      timezone: America/Sao_Paulo
+    commit-message:
+      prefix: "deps(ci)"
+    groups:
+      actions:
+        patterns: ["*"]

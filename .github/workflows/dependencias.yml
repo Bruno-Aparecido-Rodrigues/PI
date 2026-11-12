@@ -1,0 +1,105 @@
+# Controle de dependências do app
+# Roda:
+#   - em todo PR que mexe no package.json / package-lock.json
+#   - em todo push na main que mexe neles
+#   - toda segunda às 06:00 (Brasília), pra pegar vulnerabilidades novas em pacotes que não mudaram
+#
+# O que verifica (guia completo em docs/DEPENDENCIAS.md):
+#   1. a instalação bate exatamente com o package-lock.json (npm ci)
+#   2. as versões são as que o SDK do Expo espera (expo install --check)
+#   3. o código continua compilando em TypeScript
+#   4. não há vulnerabilidade crítica nas dependências do app (npm audit)
+#   e deixa um resumo com vulnerabilidades e pacotes desatualizados.
+
+name: Dependências
+
+on:
+  pull_request:
+    paths:
+      - "energyhome/package.json"
+      - "energyhome/package-lock.json"
+      - ".github/workflows/dependencias.yml"
+      - ".github/scripts/resumo-dependencias.mjs"
+  push:
+    branches: [main]
+    paths:
+      - "energyhome/package.json"
+      - "energyhome/package-lock.json"
+  schedule:
+    - cron: "0 9 * * 1" # segunda, 09:00 UTC = 06:00 em Brasília
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependencias-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App (Expo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: energyhome
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: energyhome/package-lock.json
+
+      - name: Instalar exatamente o que está no package-lock.json
+        run: npm ci
+
+      - name: Versões compatíveis com o SDK do Expo
+        # Falha se algum pacote estiver numa versão diferente da que o SDK
+        # espera. Pra corrigir no seu PC: npx expo install --fix
+        run: npx expo install --check
+
+      - name: Arquivos de configuração que ficam fora do Git
+        # firebaseConfig.ts e googleAuth.ts não vão pro repositório. Aqui são
+        # criadas versões falsas, só pra o TypeScript compilar.
+        run: |
+          if [ ! -f src/services/firebaseConfig.ts ]; then
+            cat > src/services/firebaseConfig.ts <<'EOF'
+          // Gerado pelo CI só pra compilar (o arquivo real fica fora do Git)
+          export const firebaseConfig = {
+            apiKey: 'ci',
+            authDomain: 'ci.firebaseapp.com',
+            databaseURL: 'https://ci-default-rtdb.firebaseio.com',
+            projectId: 'ci',
+            storageBucket: 'ci.appspot.com',
+            messagingSenderId: '0',
+            appId: 'ci',
+          };
+          EOF
+          fi
+          if [ ! -f src/constants/googleAuth.ts ]; then
+            cat > src/constants/googleAuth.ts <<'EOF'
+          // Gerado pelo CI só pra compilar (o arquivo real fica fora do Git)
+          export const GOOGLE_WEB_CLIENT_ID = 'ci.apps.googleusercontent.com';
+          export const GOOGLE_ANDROID_CLIENT_ID = 'ci.apps.googleusercontent.com';
+          export const GOOGLE_IOS_CLIENT_ID = 'ci.apps.googleusercontent.com';
+          EOF
+          fi
+
+      - name: TypeScript compila
+        run: npx tsc --noEmit
+
+      - name: Levantar vulnerabilidades e pacotes desatualizados
+        # Os dois comandos "falham" quando encontram algo; quem decide se o
+        # job falha é o passo seguinte
+        run: |
+          npm audit --omit=dev --json > "$RUNNER_TEMP/audit.json" || true
+          npm outdated --json > "$RUNNER_TEMP/outdated.json" || true
+
+      - name: Resumo (e falha se houver vulnerabilidade crítica)
+        run: node ../.github/scripts/resumo-dependencias.mjs "$RUNNER_TEMP/audit.json" "$RUNNER_TEMP/outdated.json"
