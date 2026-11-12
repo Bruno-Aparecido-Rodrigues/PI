@@ -61,8 +61,13 @@ if (!audit || audit.error) {
       let correcao = 'sem correção ainda';
       if (v.fixAvailable === true) correcao = '`npm audit fix`';
       else if (v.fixAvailable && typeof v.fixAvailable === 'object') {
-        correcao = `atualizar ${v.fixAvailable.name} para ${v.fixAvailable.version}` +
-          (v.fixAvailable.isSemVerMajor ? ' (versão major: testar com cuidado)' : '');
+        const instalado = desatualizados[v.fixAvailable.name]?.current;
+        const voltaVersao =
+          instalado && Number(v.fixAvailable.version.split('.')[0]) < Number(instalado.split('.')[0]);
+        correcao = voltaVersao
+          ? `o npm sugere voltar ${v.fixAvailable.name} para ${v.fixAvailable.version}: não fazer, ver docs/DEPENDENCIAS.md`
+          : `atualizar ${v.fixAvailable.name} para ${v.fixAvailable.version}` +
+            (v.fixAvailable.isSemVerMajor ? ' (versão major: testar com cuidado)' : '');
       }
       linhas.push(`| ${v.name} | ${v.severity === 'critical' ? 'Crítica' : 'Alta'} | ${correcao} |`);
     }
@@ -86,7 +91,11 @@ if (!lista.length) {
     if (DO_SDK.has(nome)) quem = 'troca de SDK do Expo';
     else {
       const partes = [];
-      if (info.wanted && info.wanted !== info.current) partes.push(`Dependabot (até ${info.wanted})`);
+      // Fora do Expo, o Dependabot propõe tudo que não for major (inclusive
+      // 0.24 -> 0.26, que o npm não instala sozinho por causa do ^0.24)
+      const alvo = !major && !eDoExpo(nome) ? info.latest : info.wanted;
+      if (alvo && alvo !== info.current) partes.push(`Dependabot (até ${alvo})`);
+      else if (info.wanted && info.wanted !== info.current) partes.push(`Dependabot (até ${info.wanted})`);
       if (eDoExpo(nome)) {
         if (info.latest !== info.wanted) partes.push('versão nova = troca de SDK do Expo');
       } else if (major) {

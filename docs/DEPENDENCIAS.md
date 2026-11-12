@@ -86,6 +86,17 @@ resto, e o passo 2 do workflow acusaria o erro.
 3. **Não use `npm audit fix --force`**: ele sobe versões major sem perguntar e
    pode quebrar o Expo.
 
+## Vulnerabilidades conhecidas e aceitas
+
+| Pacotes | Gravidade | Por que não afeta o app | Quando resolver |
+|---|---|---|---|
+| `@firebase/firestore`, `@firebase/firestore-compat`, `@grpc/grpc-js`, `undici` (todos dentro do `firebase` 10) | Alta | O pacote `firebase` instala todos os módulos, mas o app só importa `firebase/app`, `firebase/auth` e `firebase/database`. O Metro só coloca no APK o que é importado: o Firestore não entra, e o `grpc-js` e o `undici` são da versão Node (no celular o Firebase usa o `fetch` do React Native) | Ao atualizar o `firebase` para a versão major nova (12 ou 13), à mão e com teste completo de login, leituras ao vivo, alertas e widget |
+
+O `npm audit` sugere **voltar** o `firebase` para a 9.14.0. **Não façam isso:** é
+uma versão mais velha, e o resumo do workflow avisa quando a sugestão é voltar
+versão. Se o app passar a usar o Firestore algum dia, essa tabela deixa de valer
+e a atualização vira prioridade.
+
 ## Troca de SDK do Expo (à mão, uma vez por ano mais ou menos)
 
 ```bash
