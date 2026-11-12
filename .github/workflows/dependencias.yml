@@ -6,7 +6,7 @@
 #
 # O que verifica (guia completo em docs/DEPENDENCIAS.md):
 #   1. a instalação bate exatamente com o package-lock.json (npm ci)
-#   2. as versões são as que o SDK do Expo espera (expo install --check)
+#   2. os pacotes do Expo combinam com a versão do expo instalada (expo install --check)
 #   3. o código continua compilando em TypeScript
 #   4. não há vulnerabilidade crítica nas dependências do app (npm audit)
 #   e deixa um resumo com vulnerabilidades e pacotes desatualizados.
@@ -59,10 +59,30 @@ jobs:
       - name: Instalar exatamente o que está no package-lock.json
         run: npm ci
 
-      - name: Versões compatíveis com o SDK do Expo
-        # Falha se algum pacote estiver numa versão diferente da que o SDK
-        # espera. Pra corrigir no seu PC: npx expo install --fix
+      - name: Pacotes compatíveis com o expo instalado
+        # Falha se algum pacote estiver numa versão que não combina com a
+        # versão do expo que está no package-lock (ex.: um react-native-*
+        # de outro SDK). EXPO_OFFLINE faz a conferência pela lista que vem
+        # dentro do próprio pacote expo, e não pela correção mais nova
+        # publicada pelo Expo, que muda toda semana.
+        # Pra corrigir no seu PC: npx expo install --fix
+        env:
+          EXPO_OFFLINE: "1"
         run: npx expo install --check
+
+      - name: Correções novas do Expo (só aviso, não bloqueia)
+        run: |
+          if ! saida=$(npx expo install --check 2>&1); then
+            echo "::warning title=Correções novas do Expo::Rode 'npx expo install --fix' na pasta energyhome (ou aceite o PR do grupo expo-sdk)."
+            {
+              echo '## Correções novas do Expo (não bloqueia)'
+              echo
+              echo '```'
+              echo "$saida"
+              echo '```'
+              echo
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Arquivos de configuração que ficam fora do Git
         # firebaseConfig.ts e googleAuth.ts não vão pro repositório. Aqui são
