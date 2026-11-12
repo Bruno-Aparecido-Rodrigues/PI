@@ -88,10 +88,15 @@ firmware/         firmware do ESP32 (energyhome_hub/energyhome_hub.ino)
 alertas-worker/   serviço de alertas e limpeza (Cloudflare Worker)
 case/             case 3D: script do Fusion 360 e arquivos STL
 schematic/        esquemático elétrico
-docs/             diagramas
+docs/             diagramas e guias (DEPENDENCIAS.md: controle de dependências)
+.github/          Dependabot e workflow que testa as atualizações de dependências
 scripts/          scripts de dados de teste (não vão para o GitHub)
 HANDOFF.md        documentação técnica completa: como configurar, rodar e manter
 ```
+
+## Controle de dependências
+
+O Dependabot procura versões novas das dependências do app toda segunda e abre um pull request para cada grupo de atualizações. Cada PR passa pelo workflow **Dependências** (GitHub Actions), que confere se as versões batem com o SDK do Expo, se o código continua compilando e se não há vulnerabilidade crítica. Troca de SDK do Expo e versões major ficam com a equipe. Detalhes em [docs/DEPENDENCIAS.md](docs/DEPENDENCIAS.md).
 
 ## Estado atual do projeto
 

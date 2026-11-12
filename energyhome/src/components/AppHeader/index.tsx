@@ -45,16 +45,14 @@ export function AppHeader() {
   const toques = useRef({ n: 0, ultimo: 0 });
   async function tocarNaMarca() {
     const agora = Date.now();
-    const t = toques.current;
-    t.n = agora - t.ultimo < 1500 ? t.n + 1 : 1;
-    t.ultimo = agora;
-    if (t.n < 7 || !hubId) return;
-    t.n = 0;
+    const toque = toques.current;
+    toque.n = agora - toque.ultimo < 1500 ? toque.n + 1 : 1;
+    toque.ultimo = agora;
+    if (toque.n < 7 || !hubId) return;
+    toque.n = 0;
     try {
       const r = await alternarAprendizado(hubId);
-      avisar(
-        r === 'encerrado' ? t('topo.testeAtivado') : t('topo.aprendizadoReiniciado')
-      );
+      avisar(r === 'encerrado' ? t('topo.testeAtivado') : t('topo.aprendizadoReiniciado'));
     } catch {
       avisar(t('topo.erroTeste'));
     }

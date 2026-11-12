@@ -1,6 +1,11 @@
 import { initializeApp, getApps } from 'firebase/app';
 import {
   initializeAuth,
+  // Existe só na versão React Native do Firebase (a que o Metro usa no app),
+  // mas os tipos do pacote são os da versão web, que não têm essa função.
+  // Funciona no celular; o comentário abaixo só silencia o TypeScript. Se um
+  // dia o Firebase corrigir os tipos, o tsc avisa e esta linha pode sair.
+  // @ts-expect-error tipos web do firebase/auth não declaram getReactNativePersistence
   getReactNativePersistence,
   getAuth,
   signInWithEmailAndPassword,
