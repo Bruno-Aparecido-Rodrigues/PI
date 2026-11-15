@@ -1,0 +1,47 @@
+# Arquivos que o EAS Build NÃO envia pros servidores do Expo.
+#
+# Quando este arquivo existe, o EAS usa ele no lugar dos .gitignore. A
+# diferença é proposital: estes três arquivos ficam fora do Git, mas o build
+# precisa deles, então aqui eles NÃO estão listados (vão pro build):
+#   energyhome/google-services.json
+#   energyhome/src/services/firebaseConfig.ts
+#   energyhome/src/constants/googleAuth.ts
+#
+# Se acrescentar algo no .gitignore, veja se também precisa entrar aqui.
+
+# Dependências e gerados (o EAS instala de novo no servidor)
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+*.tsbuildinfo
+
+# Nunca vão pro build: chave da conta de serviço, scripts de teste e dados reais
+*firebase-adminsdk*.json
+scripts/
+dados-outubro/
+.env
+.env*.local
+
+# Certificados e chaves de assinatura locais
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Não fazem parte do app (deixa o envio menor)
+case/
+schematic/
+firmware/
+docs/
+.github/
+
+# Logs e arquivos do sistema
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+pnpm-debug.log*
+.DS_Store
+Thumbs.db
