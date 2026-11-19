@@ -49,6 +49,9 @@
             "simulado": {
               ".validate": "newData.isBoolean()"
             },
+            "corrigido": {
+              ".validate": "newData.isBoolean()"
+            },
             "timestamp": {
               ".validate": "newData.isNumber()"
             },
@@ -87,6 +90,45 @@
         ".write": "auth != null && root.child('hubs').child($hubId).child('owners').child(auth.uid).exists()",
         ".validate": "newData.isNumber()"
       },
+      "ciclos": {
+          ".write": "auth != null && root.child('hubs').child($hubId).child('owners').child(auth.uid).exists() || (!newData.exists() && auth != null && newData.parent().child('owners').child(auth.uid).exists() && data.parent().child('unclaimedAt').isNumber() && data.parent().child('unclaimedAt').val() < now - 15552000000)",
+          "$inicio": {
+            ".validate": "newData.hasChildren(['inicio', 'fim', 'kwh', 'tarifa', 'cip', 'valor', 'fechadoEm'])",
+            "inicio": {
+              ".validate": "newData.isNumber()"
+            },
+            "fim": {
+              ".validate": "newData.isNumber() && newData.val() > newData.parent().child('inicio').val()"
+            },
+            "kwh": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "coberturaMs": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "tarifa": {
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() < 100"
+            },
+            "cip": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+            },
+            "valor": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "fechadoEm": {
+              ".validate": "newData.isNumber()"
+            },
+            "datasEstimadas": {
+              ".validate": "newData.isBoolean()"
+            },
+            "simulado": {
+              ".validate": "newData.isBoolean()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
       "settings": {
           ".write": "auth != null && root.child('hubs').child($hubId).child('owners').child(auth.uid).exists() || (!newData.exists() && auth != null && newData.parent().child('owners').child(auth.uid).exists() && data.parent().child('unclaimedAt').isNumber() && data.parent().child('unclaimedAt').val() < now - 15552000000)",
           "tariff": {
@@ -117,6 +159,11 @@
             },
             "$other": {
               ".validate": false
+            }
+          },
+          "leituras": {
+            "$data": {
+              ".validate": "newData.val() === true && $data.matches(/^[0-9]+$/) && $data.length <= 15"
             }
           },
           "aneel": {

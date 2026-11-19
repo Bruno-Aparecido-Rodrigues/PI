@@ -133,6 +133,7 @@ export async function pairHub(uid: string, rawHubId: string): Promise<void> {
     [`hubs/${hubId}/readings`]: null,
     [`hubs/${hubId}/alerts`]: null,
     [`hubs/${hubId}/settings`]: null,
+    [`hubs/${hubId}/ciclos`]: null,
     [`hubs/${hubId}/current`]: null,
   };
 

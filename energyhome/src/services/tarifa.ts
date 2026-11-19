@@ -62,6 +62,7 @@ export interface ConfigTarifa {
   cip: number;                  // R$/mês (iluminação pública)
   aneel: DadosAneel | null;
   ciclo: CicloConfig | null;    // datas de leitura da conta (ver services/ciclo.ts)
+  leituras: number[];           // datas das leituras reais já informadas (histórico de contas)
 }
 
 // ─── Firebase ────────────────────────────────────────────────────────────
@@ -94,7 +95,17 @@ export function configDeSettings(s: any): ConfigTarifa {
           }
         : null,
     ciclo: cicloDeSettings(s?.ciclo),
+    leituras: lerLeituras(s?.leituras),
   };
+}
+
+/** { "1761447600000": true, ... } -> [1761447600000, ...] */
+function lerLeituras(v: unknown): number[] {
+  if (!v || typeof v !== 'object') return [];
+  return Object.keys(v)
+    .map(Number)
+    .filter((n) => Number.isFinite(n) && n > 0)
+    .sort((a, b) => a - b);
 }
 
 /** Observa em tempo real a configuração de tarifa de um hub. */
@@ -104,9 +115,18 @@ export function subscribeToConfigTarifa(hubId: string, callback: (config: Config
   });
 }
 
-/** Grava (ou apaga, com null) as datas de leitura da conta. */
+/**
+ * Grava (ou apaga, com null) as datas de leitura da conta. A data da última
+ * leitura também entra em settings/leituras, que guarda todas as leituras
+ * reais já informadas: quando a pessoa troca pro ciclo seguinte, o histórico
+ * de contas (Gráficos) continua sabendo onde o ciclo anterior começou e
+ * terminou. (A "próxima leitura" é só a data prevista na conta, por isso não
+ * entra: o dia real pode mudar.)
+ */
 export async function salvarCiclo(hubId: string, ciclo: CicloConfig | null): Promise<void> {
-  await update(ref(db, `hubs/${hubId}/settings`), { ciclo });
+  const campos: Record<string, unknown> = { ciclo };
+  if (ciclo) campos[`leituras/${ciclo.ultimaLeitura}`] = true;
+  await update(ref(db, `hubs/${hubId}/settings`), campos);
 }
 
 /** Grava campos da configuração (só o que for passado). */

@@ -79,6 +79,65 @@ export function periodoAtual(ciclo: CicloConfig | null, agora: number = Date.now
   return { inicio, fim, tipo: 'ciclo', estimado };
 }
 
+export interface PeriodoFechado {
+  inicio: number;
+  fim: number;
+  /** true quando alguma das duas datas foi estimada (não veio de uma conta) */
+  datasEstimadas: boolean;
+}
+
+/**
+ * Períodos de conta que já terminaram, do mais recente pro mais antigo
+ * (usados no histórico de contas dos Gráficos).
+ *
+ * Com o ciclo informado, as fronteiras vêm das datas de "última leitura" que
+ * a pessoa já digitou em Ajustes (`conhecidas`, guardadas a cada vez que ela
+ * salva o ciclo). Essas são leituras reais. A "próxima leitura" é só a data
+ * prevista na conta: um ciclo que termina nela fica com datasEstimadas até a
+ * pessoa informar a leitura real. Onde não há data, a fronteira é estimada
+ * com a mesma duração do ciclo atual. Sem ciclo, são os meses do calendário.
+ */
+export function periodosFechados(
+  ciclo: CicloConfig | null,
+  conhecidas: number[],
+  agora: number = Date.now(),
+  limite = 12
+): PeriodoFechado[] {
+  const atual = periodoAtual(ciclo, agora);
+  const lista: PeriodoFechado[] = [];
+
+  if (atual.tipo === 'mes' || !ciclo) {
+    let fim = atual.inicio;
+    for (let i = 0; i < limite; i++) {
+      const d = new Date(fim);
+      const inicio = new Date(d.getFullYear(), d.getMonth() - 1, 1).getTime();
+      lista.push({ inicio, fim, datasEstimadas: false });
+      fim = inicio;
+    }
+    return lista;
+  }
+
+  const exatas = new Set([...conhecidas, ciclo.ultimaLeitura]);
+  const ordenadas = Array.from(exatas).sort((a, b) => b - a); // mais recente primeiro
+  const dias = Math.round((ciclo.proximaLeitura - ciclo.ultimaLeitura) / DIA_MS);
+
+  let fim = atual.inicio;
+  let fimExato = exatas.has(fim);
+  for (let i = 0; i < limite; i++) {
+    // Leitura conhecida anterior, a uma distância que faça sentido pra um ciclo
+    const anterior = ordenadas.find((x) => {
+      const d = Math.round((fim - x) / DIA_MS);
+      return d >= MIN_DIAS_CICLO && d <= MAX_DIAS_CICLO;
+    });
+    const inicio = anterior ?? somarDias(fim, -dias);
+    const inicioExato = anterior !== undefined;
+    lista.push({ inicio, fim, datasEstimadas: !(fimExato && inicioExato) });
+    fim = inicio;
+    fimExato = inicioExato;
+  }
+  return lista;
+}
+
 /** "26/10" */
 export function diaMes(ms: number): string {
   const d = new Date(ms);

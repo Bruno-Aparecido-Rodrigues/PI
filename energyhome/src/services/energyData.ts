@@ -1,4 +1,16 @@
-import { getDatabase, ref, onValue, onChildAdded, query, orderByChild, startAt, get, set } from 'firebase/database';
+import {
+  getDatabase,
+  ref,
+  onValue,
+  onChildAdded,
+  query,
+  orderByChild,
+  startAt,
+  endAt,
+  limitToFirst,
+  get,
+  set,
+} from 'firebase/database';
 import { app } from './authIntegration';
 
 const db = getDatabase(app);
@@ -191,6 +203,44 @@ export function subscribeToReadingsSince(
       if (fontes.get(id) === atual) fontes.delete(id);
     }
   };
+}
+
+/** Horário da leitura mais antiga do hub (ms), ou null se não houver nenhuma. */
+export async function primeiraLeitura(hubId: string): Promise<number | null> {
+  const snapshot = await get(query(ref(db, `hubs/${hubId}/readings`), orderByChild('timestamp'), limitToFirst(1)));
+  let primeira: number | null = null;
+  snapshot.forEach((child) => {
+    const r = lerLeitura(child.val());
+    if (r) primeira = r.timestamp;
+  });
+  return primeira;
+}
+
+export interface LeiturasDoPeriodo {
+  leituras: PowerReading[];
+  /** Quantas delas vieram do script de teste (campo "simulado") */
+  simuladas: number;
+}
+
+/**
+ * Baixa uma vez (sem ficar ouvindo) as leituras de um período fechado
+ * [inicio, fim). Usado pra calcular a conta final de ciclos que já terminaram.
+ */
+export async function lerLeiturasDoPeriodo(hubId: string, inicio: number, fim: number): Promise<LeiturasDoPeriodo> {
+  const snapshot = await get(
+    query(ref(db, `hubs/${hubId}/readings`), orderByChild('timestamp'), startAt(inicio), endAt(fim - 1))
+  );
+  const leituras: PowerReading[] = [];
+  let simuladas = 0;
+  snapshot.forEach((child) => {
+    const valor = child.val();
+    const r = lerLeitura(valor);
+    if (!r) return;
+    leituras.push(r);
+    if (valor?.simulado === true) simuladas++;
+  });
+  leituras.sort((a, b) => a.timestamp - b.timestamp);
+  return { leituras, simuladas };
 }
 
 /**

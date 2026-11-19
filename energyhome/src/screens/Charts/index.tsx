@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { AppHeader } from '../../components/AppHeader';
 import { BarChart, BarChartDatum } from '../../components/BarChart';
+import { ContasCiclos } from '../../components/ContasCiclos';
 import { useCurrentHub } from '../../hooks/useCurrentHub';
 import {
   subscribeToReadingsSince,
@@ -11,10 +12,13 @@ import {
   bucketKwhByDay,
   bucketKwhByHourToday,
   averageWattsByHourOfDay,
+  integrateEnergy,
   PowerReading,
 } from '../../services/energyData';
 import { ConfigTarifa, subscribeToConfigTarifa, TARIFA_PADRAO } from '../../services/tarifa';
 import { periodoAtual } from '../../services/ciclo';
+import { calcularContaDoMes } from '../../services/contaMes';
+import { CicloFechado, fecharCiclosPendentes, subscribeToCiclosFechados } from '../../services/historicoCiclos';
 import { criarEstilos } from './style';
 import { useCores, useEstilos } from '../../theme/TemaContext';
 import { useRecarregar } from '../../hooks/useRecarregar';
@@ -89,6 +93,44 @@ function ChartsConteudo({
     if (!hubId || desde === null) return;
     return subscribeToReadingsSince(hubId, desde, setReadings);
   }, [hubId, desde]);
+
+  // ─── Contas por ciclo ───────────────────────────────────────────────
+  const [fechados, setFechados] = useState<CicloFechado[] | null>(null);
+  const [calculando, setCalculando] = useState(false);
+  const fechadosRef = useRef<CicloFechado[] | null>(null);
+  fechadosRef.current = fechados;
+
+  useEffect(() => {
+    if (!hubId) return;
+    return subscribeToCiclosFechados(hubId, setFechados);
+  }, [hubId]);
+
+  // Fecha os ciclos que terminaram e ainda não estão no histórico. Roda ao
+  // abrir a tela e quando as datas do ciclo mudam (não a cada ciclo salvo).
+  const historicoCarregado = fechados !== null;
+  const chaveCiclo = `${config?.ciclo?.ultimaLeitura}|${config?.ciclo?.proximaLeitura}|${config?.leituras.length}`;
+  useEffect(() => {
+    if (!hubId || !config || !fechadosRef.current) return;
+    let ativo = true;
+    setCalculando(true);
+    fecharCiclosPendentes(hubId, config, fechadosRef.current)
+      .catch((erro) => console.warn('Não foi possível fechar os ciclos anteriores:', erro))
+      .finally(() => {
+        if (ativo) setCalculando(false);
+      });
+    return () => {
+      ativo = false;
+    };
+    // config entra pela chave: tarifa nova não precisa refazer nada
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hubId, temConfig, historicoCarregado, chaveCiclo]);
+
+  // Conta do período atual (a mesma do Dashboard)
+  const contaAtual = useMemo(() => {
+    const doPeriodo = readings.filter((r) => r.timestamp >= periodo.inicio);
+    const { kwh, coveredMs } = integrateEnergy(doPeriodo);
+    return calcularContaDoMes(kwh, coveredMs, tariff, config?.cip ?? 0, Date.now(), periodo.fim);
+  }, [readings, periodo.inicio, periodo.fim, tariff, config?.cip]);
 
   const profileReadings = useMemo(() => {
     const inicio = startOfDaysAgoMs(6);
@@ -195,6 +237,14 @@ function ChartsConteudo({
             valueFormatter={(v) => `R$${num(v, v < 10 ? 2 : 1)}`}
           />
         </View>
+
+        <ContasCiclos
+          periodo={periodo}
+          estimadaAtual={contaAtual.estimada}
+          projetadaAtual={contaAtual.projetada}
+          fechados={fechados}
+          calculando={calculando}
+        />
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t('graf.perfil')}</Text>
